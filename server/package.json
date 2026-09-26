@@ -1,0 +1,20 @@
+{
+  "name": "@openrpg/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@colyseus/tools": "^0.18.4",
+    "@openrpg/shared": "0.1.0",
+    "colyseus": "^0.18.8"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.4"
+  }
+}

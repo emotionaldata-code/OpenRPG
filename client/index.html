@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="theme-color" content="#14261f"><title>OpenRPG · The Verdant Watch</title></head>
+<body>
+  <main id="lobby">
+    <header class="masthead"><a class="brand" href="/" aria-label="OpenRPG home"><span class="sigil">♧</span> OPEN<span>RPG</span></a><div class="edition">A SHARED WORLD. A SMALL BEGINNING.</div><span class="badge">PROTOTYPE <i>01</i></span></header>
+    <div class="lobby-grid">
+      <section class="hero"><div class="eyebrow"><span></span> WOODLAND EXPEDITION</div><h1>The Verdant<br><em>Watch.</em></h1><p class="intro">The old ruins are stirring.<br>Take up your bow. Bring a friend.</p>
+        <div class="landscape"><canvas id="preview" aria-label="Pixel art map of the woodland ruins"></canvas><div class="map-label"><span>THE OLD WATCH</span><small>14 · 08 &nbsp; / &nbsp; GREENWOOD</small></div><span class="map-compass">N<br>↑</span></div>
+        <div class="hero-footer"><span><b>01</b> AUTHORED WORLD</span><span><b>03</b> ADVENTURERS</span><span><b>∞</b> SECOND CHANCES</span></div>
+      </section>
+      <section class="entry"><div class="section-top"><span class="eyebrow">YOUR NEXT ADVENTURE</span><span class="tiny-star">✧</span></div><h2>Gather your party.</h2><p class="muted">No account. Just a name and a little courage.</p>
+        <label class="field-label" for="name">ADVENTURER NAME</label><input id="name" maxlength="18" minlength="2" placeholder="What shall we call you?" autocomplete="nickname" value="Wayfarer">
+        <div class="field-label room-label">START AN EXPEDITION</div>
+        <div class="visibility" role="group" aria-label="Room visibility"><button id="public" class="selected" aria-pressed="true"><strong>Public</strong><small>Welcome fellow travelers</small></button><button id="invite" aria-pressed="false"><strong>Invite only</strong><small>For your chosen party</small></button></div>
+        <button id="create" class="primary">Enter the woodland <span>↗</span></button>
+        <div class="divider"><span>OR FOLLOW A FRIEND</span></div>
+        <form id="join-form" class="join-row"><input id="room-id" aria-label="Room ID" placeholder="Paste a room ID" maxlength="64"><button id="join" type="submit">Join <span>→</span></button></form>
+        <div class="public-header"><h3>Open expeditions</h3><span id="connection" class="connection">Connecting…</span></div><div id="rooms" aria-live="polite"><p class="empty">Looking for fellow adventurers…</p></div>
+        <p id="status" role="status" aria-live="polite"></p>
+      </section>
+    </div>
+    <footer class="guide"><span class="eyebrow">A FIELD GUIDE</span><span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Move</span><span><b>⌖</b> Mouse to aim</span><span><b>↖</b> Hold click to fire</span><span class="footer-note">Better, together.</span></footer>
+  </main>
+  <section id="play" hidden>
+    <header class="game-header"><span class="brand small">♧ OPEN<span>RPG</span></span><span class="game-location">THE VERDANT WATCH <small id="room-info"></small></span><button id="copy">Copy invite</button><button id="leave">Leave <span>↗</span></button></header>
+    <div id="game"></div>
+    <aside class="hud"><span class="eyebrow">THE WAYFARER</span><strong id="health-text">100 / 100</strong><div class="health-track"><div id="health-fill"></div></div><span id="party"></span></aside>
+    <div id="recovery" hidden role="status">Connection lost · finding your way back…</div>
+    <div class="game-bottom"><span>WASD / ARROWS &nbsp; Move <i>·</i> MOUSE &nbsp; Aim <i>·</i> HOLD CLICK &nbsp; Fire</span><span id="combat-status"></span><span id="diagnostics"></span></div>
+  </section>
+  <script type="module" src="/src/main.ts"></script>
+</body></html>
