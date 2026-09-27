@@ -1,0 +1,5 @@
+.audio-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; flex-shrink: 0; min-height: 40px; padding: 9px 12px; color: #e4cf95; border: 1px solid #85764f; border-radius: 6px; background: linear-gradient(#304432, #1c3026); font-size: 11px; letter-spacing: .3px; }
+.audio-toggle svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.audio-toggle[aria-pressed=false] { color: #a5b49d; border-color: #52634b; }
+.audio-toggle[aria-pressed=false] .audio-waves, .audio-toggle[aria-pressed=true] .audio-muted { display: none; }
+@media (max-width: 760px) { .audio-toggle [data-audio-label] { display: none; } .audio-toggle { padding: 9px; } .masthead { gap: 12px; } }

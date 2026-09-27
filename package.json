@@ -17,7 +17,13 @@
     "build": "npm run build -w @openrpg/shared && npm run build -w @openrpg/server && npm run build -w @openrpg/client",
     "typecheck": "npm run build -w @openrpg/shared && npm run typecheck --workspaces && tsc -p tests/tsconfig.json",
     "test": "npm run build -w @openrpg/shared && tsx --test tests/*.test.ts",
-    "test:browser": "npm run build -w @openrpg/shared && playwright test"
+    "test:browser": "npm run build -w @openrpg/shared && playwright test",
+    "start": "NODE_ENV=production npm run start -w @openrpg/server",
+    "db:up": "docker compose up -d --wait db",
+    "db:down": "docker compose stop db",
+    "db:migrate": "npm run db:migrate -w @openrpg/server",
+    "db:rollback": "npm run db:rollback -w @openrpg/server",
+    "db:migration": "npm run db:migration -w @openrpg/server --"
   },
   "devDependencies": {
     "typescript": "^5.9.3",

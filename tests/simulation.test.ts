@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WorldState, Player, RULES, WORLD, OBSTACLES, SPAWNS, MOB_SPAWNS, movePlayer, moveBody, overlaps, sweepRect, sanitizeInput, parseRoomOptions, type Intent } from '@openrpg/shared';
+import { WorldState, Player, PROJECTILES, CHARGE, RULES, ENEMY_RULES, WORLD, OBSTACLES, SPAWNS, MOB_SPAWNS, movePlayer, moveBody, overlaps, sweepRect, sanitizeInput, parseRoomOptions, type Intent } from '@openrpg/shared';
 import { Simulation } from '../server/src/simulation/world.js';
-const intent = (overrides: Partial<Intent> = {}): Intent => ({ moveX: 0, moveY: 0, aim: 0, fire: false, ...overrides });
+const intent = (overrides: Partial<Intent> = {}): Intent => ({ moveX: 0, moveY: 0, aim: 0, fire: false, special: false, ...overrides });
 const player = () => new Player({ name: 'Test', x: 250, y: 790, protectedUntil: 0 });
 function fixture() { const state = new WorldState(); const sim = new Simulation(state); sim.addPlayer('one', 'One'); return { state, sim, p: state.players.get('one')! }; }
 function ticks(sim: Simulation, count: number): void { for (let i = 0; i < count; i++) sim.advance(1 / RULES.tickRate); }
@@ -37,41 +37,41 @@ test('projectile sweep detects thin obstacles, grazing edges, and starts inside'
   assert.equal(sweepRect({ x: 0, y: 80 }, { x: 200, y: 80 }, wall), null);
   assert.equal(sweepRect({ x: 50, y: 100 }, { x: 50, y: 120 }, wall), null);
 });
-test('malformed input becomes finite bounded intent; invalid names/options reject', () => {
+test('malformed input becomes finite bounded intent; invalid room options reject', () => {
   const cmd = intent({ moveX: Infinity, moveY: -100, aim: NaN }); sanitizeInput(cmd);
   assert.deepEqual(cmd, intent({ moveX: 0, moveY: -1, aim: 0 }));
-  assert.throws(() => parseRoomOptions({ name: '<script>', visibility: 'public' }));
+  assert.throws(() => parseRoomOptions(null));
   assert.throws(() => parseRoomOptions({ name: 'Okay', visibility: 'hidden' }));
-  assert.deepEqual(parseRoomOptions({ name: '  Archer  ', visibility: 'invite' }), { name: 'Archer', visibility: 'invite' });
+  assert.deepEqual(parseRoomOptions({ name: '  Archer  ', visibility: 'invite' }), { visibility: 'invite', mapId: 'forest', mode: 'testing' });
 });
 test('bow cooldown follows simulation time, not input calls', () => {
   const { sim, state } = fixture();
   for (let i = 0; i < 1000; i++) sim.applyInput('one', intent({ fire: true }), 0);
-  assert.equal(state.projectiles.size, 1);
-  ticks(sim, 9); sim.applyInput('one', intent({ fire: true }), 0); assert.equal(state.projectiles.size, 1);
-  ticks(sim, 1); sim.applyInput('one', intent({ fire: true }), 0); assert.equal(state.projectiles.size, 2);
+  assert.equal(state.projectiles.size, 0); sim.applyInput('one', intent(), 0); assert.equal(state.projectiles.size, 1);
+  ticks(sim, 29); sim.applyInput('one', intent({ fire: true }), 0); sim.applyInput('one', intent(), 0); assert.equal(state.projectiles.size, 1);
+  ticks(sim, 1); sim.applyInput('one', intent({ fire: true }), 0); sim.applyInput('one', intent(), 0); assert.equal(state.projectiles.size, 2);
 });
 test('arrows damage mobs, never teammates, with terrain taking the first hit', () => {
   const { sim, state, p } = fixture(); sim.addPlayer('two', 'Two');
   const ally = state.players.get('two')!; Object.assign(ally, { x: 290, y: 790 });
-  const mob = state.mobs.get('mage-0')!; Object.assign(mob, { x: 350, y: 790 });
-  sim.applyInput('one', intent({ fire: true }), 0); ticks(sim, 8);
-  assert.equal(mob.hp, RULES.mobHealth - RULES.arrowDamage); assert.equal(ally.hp, 100);
+  const mob = state.mobs.get('ranged-0')!; Object.assign(mob, { x: 350, y: 790 });
+  sim.applyInput('one', intent({ fire: true }), 0); sim.applyInput('one', intent(), 0); ticks(sim, 8);
+  assert.equal(mob.hp, ENEMY_RULES.ranged.health - Math.round(PROJECTILES.arrow.damage * CHARGE.minDamage)); assert.equal(ally.hp, 100);
   Object.assign(p, { x: 430, y: 480 }); Object.assign(mob, { x: 660, y: 480 });
-  ticks(sim, 3); sim.applyInput('one', intent({ fire: true }), 0); ticks(sim, 12);
-  assert.equal(mob.hp, RULES.mobHealth - RULES.arrowDamage);
+  ticks(sim, 23); sim.applyInput('one', intent({ fire: true }), 0); sim.applyInput('one', intent(), 0); ticks(sim, 12);
+  assert.equal(mob.hp, ENEMY_RULES.ranged.health - Math.round(PROJECTILES.arrow.damage * CHARGE.minDamage));
 });
 test('mages require line of sight and obey cooldowns', () => {
   const { sim, state, p } = fixture();
-  const m = state.mobs.get('mage-0')!; Object.assign(p, { x: 440, y: 510 }); Object.assign(m, { x: 530, y: 510 });
+  const m = state.mobs.get('ranged-0')!; Object.assign(p, { x: 440, y: 510, protectedUntil: 0 }); Object.assign(m, { x: 530, y: 510 });
   ticks(sim, 30); assert.equal([...state.projectiles.values()].filter(p => p.kind === 'bolt').length, 0);
   Object.assign(p, { x: 600, y: 720 }); Object.assign(m, { x: 680, y: 720 });
-  sim.advance(1 / 30); assert.equal([...state.projectiles.values()].filter(p => p.kind === 'bolt').length, 1);
+  p.protectedUntil = 0; ticks(sim, 12); assert.equal([...state.projectiles.values()].filter(p => p.kind === 'bolt').length, 1);
   ticks(sim, 4); assert.equal([...state.projectiles.values()].filter(p => p.kind === 'bolt').length, 1);
 });
 test('players respawn at 3 seconds protected; mobs at 8 seconds', () => {
   const { sim, state, p } = fixture();
-  p.hp = 0; p.respawnAt = 3000; const mob = state.mobs.get('mage-0')!; mob.hp = 0; mob.respawnAt = 8000;
+  p.hp = 0; p.respawnAt = 3000; const mob = state.mobs.get('ranged-0')!; mob.hp = 0; mob.respawnAt = 8000;
   ticks(sim, 89); assert.equal(p.hp, 0); ticks(sim, 2); assert.equal(p.hp, 100); assert.equal(p.generation, 1);
   assert.ok(p.protectedUntil > state.elapsed); assert.equal(mob.hp, 0);
   ticks(sim, 149); assert.equal(mob.hp, 0); ticks(sim, 1); assert.equal(mob.hp, 75); assert.equal(mob.generation, 1);

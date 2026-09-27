@@ -31,11 +31,21 @@ export function sweepRect(from: Point, to: Point, rect: Rect, radius = 0): numbe
   }
   return near;
 }
-export function terrainHit(from: Point, to: Point, radius = 0): number | null {
+export function terrainHit(from: Point, to: Point, radius = 0, walls: readonly Rect[] = OBSTACLES): number | null {
   let first: number | null = null;
-  for (const rect of OBSTACLES) {
+  for (const rect of walls) {
     const hit = sweepRect(from, to, rect, radius);
     if (hit !== null && (first === null || hit < first)) first = hit;
   }
   return first;
+}
+
+/** Disk/sector overlap includes targets grazing either edge, not just their centers. */
+export function sectorHits(from: Point, angle: number, reach: number, halfAngle: number, target: Point, radius: number): boolean {
+  const dx = target.x - from.x, dy = target.y - from.y, distance = Math.hypot(dx, dy);
+  if (distance > reach + radius) return false;
+  const offset = Math.abs(Math.atan2(Math.sin(Math.atan2(dy, dx) - angle), Math.cos(Math.atan2(dy, dx) - angle)));
+  if (offset <= halfAngle) return true;
+  const edge = offset - halfAngle, along = Math.max(0, Math.min(reach, distance * Math.cos(edge)));
+  return Math.hypot(distance * Math.cos(edge) - along, distance * Math.sin(edge)) <= radius;
 }

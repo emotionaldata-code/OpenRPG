@@ -7,14 +7,27 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "tsx src/db/cli.ts up",
+    "db:rollback": "tsx src/db/cli.ts down",
+    "db:migration": "node-pg-migrate create --migration-file-language sql --migrations-dir migrations"
   },
   "dependencies": {
-    "@colyseus/tools": "^0.18.4",
+    "@colyseus/core": "^0.18.17",
+    "@colyseus/ws-transport": "^0.18.4",
     "@openrpg/shared": "0.1.0",
-    "colyseus": "^0.18.8"
+    "argon2": "^0.45.1",
+    "cookie": "^0.7.2",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "node-pg-migrate": "^9.0.0",
+    "pg": "^8.23.0"
   },
   "devDependencies": {
-    "@colyseus/sdk": "^0.18.4"
+    "@colyseus/sdk": "^0.18.4",
+    "@types/cookie": "^0.6.0",
+    "@types/express": "^5.0.6",
+    "@types/pg": "^8.23.1"
   }
 }

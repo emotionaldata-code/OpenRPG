@@ -4,3 +4,8 @@ export * from './input.js';
 export * from './collision.js';
 export * from './movement.js';
 export * from './state.js';
+export * from './account.js';
+export * from './skin.js';
+export * from './combat.js';
+export * from './enemies.js';
+export * from './items.js';

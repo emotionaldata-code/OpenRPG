@@ -1,63 +1,194 @@
-# OpenRPG — The Verdant Watch
+# OpenRPG — Five Realms
 
-A guest-only cooperative combat prototype for up to three players in a desktop browser. Enter a woodland ruin, move with WASD or arrow keys, aim with the mouse, and hold the left mouse button to fire. Four hostile mages patrol the ruins and fight nearby adventurers.
+An account-based cooperative and PvP combat prototype for up to three players in a desktop browser. Choose Forest, Castle, Paradise, Hell, or Mountain, move with WASD or arrow keys, aim with the mouse, and hold the left mouse button to charge and release to attack; right click activates your special. Each destination has its own layout and themed melee, ranged, and boss enemies. Testing offers unlimited respawns; Story unlocks each realm in order with one life per player. Fight opens every map for player-versus-player combat without monsters and with unlimited respawns. Permanent loot, class equipment, and packed health potions carry the first progression loop.
 
 ## Run locally
 
-Requires Node.js 22.12+ and npm 10+.
+Requires Node.js 22.12+, npm 10+, and Docker Compose.
 
 ```sh
 npm ci
-npm run dev
+cp .env.local.example .env.local
+npm run db:up       # PostgreSQL 17 on localhost:5433, persistent Docker volume
+npm run dev        # applies pending migrations before listening
 ```
 
-Open http://localhost:5173 in up to three browser sessions. The Colyseus server runs on port 2567. Create a public expedition, browse public rooms, or create an invite room and share its link. A room ID grants access to an invite room. Rooms are ephemeral and disappear when empty.
+Open http://localhost:5173. Register with a username and password, then choose a class before entering a room. Use separate browser profiles/incognito contexts for different accounts; ordinary tabs share a login. The Colyseus server runs on port 2567. Create a public expedition, browse public rooms, or create an invite room and share its link. A room ID grants access to an invite room. Rooms are ephemeral and disappear when empty.
 
 ```sh
 npm run build       # shared, server, and client production builds
 npm run typecheck   # all TypeScript packages
-npm test            # deterministic simulation and real-server integration tests
+npm test            # simulation + PostgreSQL/account + real-server integration tests (DB must be running)
 npx playwright install chromium # one-time browser test setup
 npm run test:browser # desktop browser acceptance tests
 ```
 
-The root development command builds shared code before starting its compiler watcher, Vite, and the server. The root `package-lock.json` locks all three workspaces. Use `VITE_SERVER_URL` to override the browser's WebSocket endpoint; `PORT` overrides the server port. This is a local prototype, with no deployment infrastructure.
+The root development command builds shared code before starting its compiler watcher, Vite, and the server. The root `package-lock.json` locks all three workspaces. Use `VITE_SERVER_URL` to override the browser's WebSocket endpoint; `PORT` overrides the server port. Production serves the built client and API from the same origin. The Vite development server proxies `/api` to port 2567. Keep the browser host consistent with `APP_ORIGIN` (localhost and 127.0.0.1 are different origins).
+
+## Accounts and class selection
+
+Usernames (3–18 ASCII letters, digits, `_` or `-`) are unique ignoring case and appear above your character and in the party HUD. Passwords are 8–128 characters and are stored as Argon2id hashes. No email or password recovery is implemented. Login persists for seven days in an HttpOnly, SameSite=Strict cookie (Secure in production); only a hash of its random token is stored in PostgreSQL. Logout revokes that session. Deleting an account requires its password, removes all its sessions, and disconnects its active players. Account requests have body limits, origin checks, and IP rate limits.
+
+Choose Archer (green hood/bow), Mage (blue robe/staff), or Warrior (armor/sword/shield). Choose a class in expedition preparation before creating or joining any room (including invites). Your selected class stays fixed for that room, including reconnects; it is not stored as an account preference. Each saved skin records which class it belongs to. Registration only asks for username and password. Account settings, your collection, skins, and logout live in **Your adventurer**, beside the **Your next adventure** tab. Each class has its own attacks and cooldowns; health and movement hitboxes stay identical.
+
+## Destinations and enemies
+
+Choose a destination on the main screen before creating a room. Joining a listed room or invite uses that room’s map. In Testing and Story, each map has two melee enemies, one ranged enemy, and one boss; Testing enemies return after eight seconds and players after three seconds with brief protection. Story uses the life limits below.
+
+| Realm | Melee | Ranged | Boss |
+| --- | --- | --- | --- |
+| Forest | Briar stalker | Hollow mage | Elderroot — slam |
+| Castle | Oathless knight | Hex cantor | The Hollow King — fan volley |
+| Paradise | Garden sentinel | Dawn oracle | Seraph of Noon — ring volley |
+| Hell | Cinder fiend | Ash invoker | Infernal Warden — fan volley |
+| Mountain | Frost raider | Rime shaman | Glacier Colossus — slam |
+
+Melee enemies chase and telegraph short strikes. Ranged enemies approach, retreat when crowded, and strafe between aimed shots. Bosses wind up a visible slam, fan, or ring attack. Step out of marked attacks or use terrain for cover. Enemies patrol when idle, navigate around obstacles, and return home when pulled too far; the camp is a refuge. Boss health and per-room defeat counts give the practice encounters a clear target, while Story adds persistent map unlocks.
+
+Content is defined in `shared/src/map.ts` (layouts, palettes, spawn points) and `shared/src/enemies.ts` (names, stats, behavior tuning). Server movement, client prediction, and every attack use the selected map’s collision geometry. `server/src/simulation/enemies.ts` owns AI; `navigation.ts` provides a small cached grid search when a direct path is blocked. No ECS, external pathfinding service, per-frame database queries, or extra per-frame network messages are needed.
+
+## Paths, collection, and expedition equipment
+
+**Testing** lets you choose any map with unlimited player/enemy respawns. **Story** unlocks Forest → Castle → Paradise → Hell → Mountain. Every member must have unlocked the destination, including invite joins. Clear all ordinary enemies twice and the boss once to complete a map; surviving party members unlock the next realm. Players never respawn during Story. Reconnection preserves the same life and equipment; leaving and joining that story room again cannot grant a new life. A full wipe ends the expedition; start a fresh room to retry. Cleared maps can be replayed. Unlocks persist per account; unfinished rooms are not saved story instances.
+
+Use **Your next adventure** to choose your class, collected weapon/armor, and 0–5 potions. Use **Your adventurer** to inspect all six collectible pieces, their class and effect, account settings, and skins. The **Shop** is the third tab in the same area. Path and preparation tabs support arrow keys, Home, and End.
+
+- One collectible weapon per class: +20% attack damage (including damaging specials).
+- Archer vest and mage robe: 15% shorter normal and special cooldowns.
+- Warrior armor: Iron will lasts 5 seconds instead of 4.
+- Health potion: restores up to 50 HP with R, with a one-second reuse cooldown. New accounts receive three stored potions.
+
+On each kill, every living, connected party member receives personal ground drops: their class weapon from melee enemies or armor from ranged enemies/bosses, one potion, and 5 coins (25 from bosses). Walk within 28 world pixels to collect them; walls block collection. Only your own drops are drawn, so party members cannot steal them. Drops fade after two minutes, disappear when you leave, and are not saved until collected. A half-second delay makes new drops visible even at close range. Story survivors can keep moving after victory to collect the final loot.
+
+Duplicate gear stacks up to 999 copies per item; potions are capped at 999 and coins at 999,999. The Shop buys/sells one unit per click: weapons cost 80 / sell for 20 coins, armor 100 / 25, and potions 10 / 3. New adventurers receive 30 coins. Coins come from loot and sales; no real-money purchases are implemented. All prices, stock and balances are checked in a locked PostgreSQL transaction. Collected gear becomes equippable on the next expedition.
+
+Original pixel icons appear on the ground, collection cards, loadout choices and shop shelves. Equipped armor and weapons use transparent, frame-synchronized layers over the unchanged default or custom skin. Art does not alter collision geometry. Equipment is a snapshot for the room; selling from another browser tab affects future loadouts, not a character already inside.
+
+Packed potions are deducted atomically at entry, never refunded at exit, and do not replenish on respawn. Looted potions go to storage, not the current belt. Equipment is fixed at room entry; the server validates ownership and class. Damage, equipment effects, potion counts, healing, cooldowns, life limits, and unlock awards are server-authoritative.
+
+Reward receipts prevent duplicated saves on retry. Pending writes are bounded; database errors pause the room while a five-second retry runs. Leaving normally waits for rewards to save. Account deletion cascades through all adventure data. As with ephemeral rooms, a process crash or prolonged database outage can lose rewards that have not reached PostgreSQL; durable offline queues are outside this prototype. Old reward receipts are pruned after seven days on startup.
+
+Content and modifiers live in `shared/src/items.ts`; persistence in `server/src/adventure/store.ts`, room reward buffering in `rewards.ts`, and collection/loadout UI in `client/src/adventure.ts`. Ground drops live in `server/src/simulation/loot.ts`; `client/src/item-art.ts` shares icon art, `loot-view.ts` draws pickups, `equipment-view.ts` layers gear, and `shop.ts` handles the shop. Add item definitions without expanding the synchronized schema or adding per-frame database work.
+
+## Class combat
+
+| Class | Hold left, then release | Right click / hold |
+| --- | --- | --- |
+| Archer | Arrow: 10–44 damage, 1 s charge cycle + 1 s cooldown | Arrow storm: 12 arrows evenly across 360°, 25 damage each, 7 s cooldown |
+| Mage | Fireball: 22–96 damage, 2 s charge cycle + 2 s cooldown | Inferno: larger, slower fireball, 300 damage, 10 s cooldown |
+| Warrior | Sword sweep: 10–42 damage, 82-unit reach / 140° sector, 0.7 s charge cycle + 0.7 s cooldown | Iron will: no damage taken for 4 s, 12 s cooldown from activation |
+
+Hold left to fill the ring around your character, then release to attack in the current aim direction. Its gold window (65–80% of the cycle) gives maximum damage: **0.65–0.8 s for Archer, 1.3–1.6 s for Mage, 0.455–0.56 s for Warrior** before equipment modifiers. Damage rises from 40% of base to 175%, then falls back to 40% at a full ring. Holding longer stays overcharged: it never auto-fires or cycles back to maximum. Quick taps produce weak attacks. Damage rounds once after equipment bonuses.
+
+Normal cooldown starts on release; charging becomes available after it expires. Holding left through cooldown begins charging when ready. Normal and special cooldowns remain independent; held right click repeats a special when ready. All classes can move while charging and releasing. The warrior hits each enemy overlapping its forward sector once, including edge grazes, with terrain line of sight required. Its sector is larger than the melee mob's 42-unit / 120° attack. Arrows and fireballs stop at their first impact; no splash damage or piercing. Projectiles sweep against square actor footprints (arrow/bolt radius 3, fireball 7, Inferno 14); the sword checks circular enemy footprints against a sector. Hitboxes remain independent of skins.
+
+The local charge ring responds immediately; the server uses its own simulation time for damage, cooldowns and attack creation. A perfect release roughly preserves the previous sustained damage rate when charge time and cooldown are combined. Specials, enemy damage and health stay unchanged. Shared tuning is in `shared/src/combat.ts`. Blur, leaving the canvas, death, disconnection, or 500 ms without input cancels a charge without firing. Reconnects and respawns preserve cooldowns; respawns clear old immunity and sweep effects.
+
+Combat stays server-authoritative at 30 Hz. Charge start and cooldown deadlines only synchronize on transitions; no per-frame charge messages or database writes. `ChargeView` draws the ring, `CombatView` renders attacks, and neither replays combat during movement reconciliation. Projectile creation and sword effects still wait for authoritative state. Loot writes remain asynchronous outside the fixed simulation.
+
+## Create and wear a skin
+
+Log in and open **My skins** in your account panel. Pick Archer, Mage, or Warrior and click **New from template**. Paint with Pencil, Eraser, Fill, or Pick; choose a palette swatch and use **Replace color** to change its color everywhere. Undo/redo keeps the last 30 edits. Zoom changes the drawing view only. Choose Front/Back/Left/Right and a frame to edit; the live Phaser preview can walk or idle.
+
+Each skin uses template version 1: 24 × 28 pixels, four directions, three frames per direction, up to 63 opaque colors plus transparency. All 12 frames start with the original class artwork. Frame 1 is also the idle pose. Every frame must contain visible pixels. Freehand edits affect the selected frame; recoloring affects all frames.
+
+Name it and click **Save new skin**, then choose it under **Your skin** before creating or joining a room. Only skins for the chosen class appear. A saved skin is an immutable design; **Edit a copy** opens it as a draft and saving creates another skin. The wardrobe holds 32 skins per account. Select a saved design and choose **Delete**, then confirm, to permanently remove it and free a slot. Deletion keeps your current draft and resets that skin’s local outfit selection to **Class original**. Overwriting, publishing, marketplace discovery, image import/export and moderation are not implemented. Closing the editor retains the draft in the current page; reloading or changing accounts discards unsaved edits. Saved designs persist across login/reloads. Account deletion removes its skins.
+
+PostgreSQL stores bounded palette/frame JSON alongside the skin's owner, name, class and template version. UUID skin IDs identify immutable artwork. The server checks ownership and class at room entry; game state carries only the ID. Each browser fetches a skin once per room while it is in use and caches its textures; no artwork or database operations are added to combat ticks. Signed-in players can read a skin by ID to render teammates; this is not a private art vault. Unavailable or deleted artwork falls back to the original class appearance. A browser that already cached a deleted skin may keep showing it until that room ends; it cannot be equipped in a new room. Stats and collision geometry remain unchanged.
+
+## Database and migrations
+
+The server uses asynchronous `pg` queries and a pool of at most five connections. Accounts, sessions, skins, adventurers, account_items, and adventure_rewards are relational tables linked by account UUID. The adventure migration adds potion storage, completed-map count, counted equipment stacks, coins, and idempotent reward receipts. A room-owned queue serializes loot writes outside the simulation loop; no generic persistence framework is used.
+
+Configuration lives at the repository root. Existing shell variables win. During development, `.env.local` wins over `.env`; with `NODE_ENV=production`, `.env.local` is never read. Both files are ignored by Git. `DATABASE_URL` is a normal `postgresql://...` URL (Node's driver is already asynchronous; do not use Python's `+asyncpg` scheme). Local Docker credentials are development-only. Change `APP_ORIGIN` to the exact browser origin when using another host.
+
+```sh
+npm run db:up                         # start/wait for local DB
+npm run db:down                       # stop DB; preserve its data
+npm run db:migration -- add_more_items # create a timestamped SQL migration
+npm run db:migrate                    # apply pending migrations explicitly
+npm run db:rollback                   # undo ONE migration locally (may delete data)
+```
+
+Edit the new file in `server/migrations/`, filling in its Up and Down sections, test against local Docker, and commit it with your code. Never edit a migration already deployed. [node-pg-migrate](https://salsita.github.io/node-pg-migrate/) records applied versions, runs pending migrations in a transaction under an advisory lock, and checks ordering. Server startup applies pending **up** migrations before accepting connections. An error or lock conflict stops startup; it never silently serves a partially migrated schema. Production rollbacks are disabled in the helper: use a reviewed forward migration. Back up real data before destructive schema changes. Multiple application processes should run migration startup sequentially (three gameplay rooms in one process need no special coordination).
+
+For production, copy `.env.example` to `.env`, set the real database URL and HTTPS origin, then run:
+
+```sh
+npm ci
+npm run build
+npm start     # sets NODE_ENV=production, migrates, then starts the server
+```
+
+Ship `server/migrations/` alongside `server/dist/` and `client/dist/`. Put HTTPS in front of the server, forward WebSocket upgrades, and set `TRUST_PROXY_HOPS` to the actual number of trusted proxy hops (0 locally). Use your provider's verified TLS database URL/CA configuration; certificate verification is not disabled. `npm start` uses production Secure cookies. No database volume reset or seed is performed on startup.
+
+Tests create and drop uniquely named databases on the local PostgreSQL server, leaving your game database intact; the local test role needs CREATEDB. `TEST_DATABASE_URL` can override the local test connection, but remote hosts are refused. Browser tests register and delete their own test accounts against the running local app. They exercise registration/login/logout/deletion, per-room class selection and three-player rendering, combat, and recovery.
+
+## Production on Dokploy
+
+`Dockerfile` builds the shared code, server and browser client into one production image. The server serves the client and `/api` on the same origin, and accepts Colyseus WebSocket upgrades on that same port. This keeps cookies, API calls and game connections on one HTTPS domain. `compose.production.yaml` starts this app container and connects to your existing PostgreSQL service; it does not create a second database.
+
+In Dokploy, create a **Docker Compose** deployment (the Docker Compose type supports `build`; the Docker Stack type does not), point it at this repository/branch, and set the Compose file path to `compose.production.yaml`. Add these variables in the deployment's Environment page:
+
+```text
+DATABASE_URL=postgresql://USER:PASSWORD@DB_HOST:5432/DB_NAME?sslmode=verify-full
+APP_ORIGIN=https://game.example.com
+TRUST_PROXY_HOPS=1
+```
+
+Use the database provider's actual connection URL and TLS options. If PostgreSQL is another Dokploy service, use its reachable internal hostname and ensure the app can join/reach its network; `localhost` inside this app container means the app container itself. The database and role must already exist, and the role must be allowed to create tables/indexes in the target schema (usually by owning the fresh database/schema). The migrations use PostgreSQL's built-in `gen_random_uuid()` function. `TEST_DATABASE_URL` is only for local tests and is not needed here.
+
+Deploy, then add a Dokploy domain for service `app`, container port `2567`, with HTTPS enabled. DNS must point to the Dokploy host. The compose file intentionally uses `expose`, not a public host port; configure the domain through Dokploy's Domains tab. The app uses the browser's current origin for both HTTP and WebSocket connections, so do not set `VITE_SERVER_URL` in this setup. `APP_ORIGIN` must exactly match the public origin (scheme and host, no path or trailing slash). `TRUST_PROXY_HOPS` should match the number of trusted reverse-proxy hops; `1` is the usual Dokploy/Traefik setup.
+
+On each container start, `npm start` applies pending forward migrations before opening port 2567. The image includes `server/migrations/`; migration failure prevents the app becoming healthy. This is a single-process game server: deploy one app replica because rooms and live sessions are held in memory. Take a database backup before a release that changes schema. Production rollback migrations are deliberately disabled; ship a reviewed forward migration instead.
+
+Only `DATABASE_URL` and `APP_ORIGIN` are required deployment variables. `TRUST_PROXY_HOPS` is optional (defaults to `1` in this Compose file). `NODE_ENV=production` and `PORT=2567` are set by Compose. No application signing key or separate frontend URL is currently required.
 
 ## Playing
 
-- WASD / arrow keys: move. Mouse: aim. Left click / hold: shoot.
-- Trees, stone walls, and map edges stop movement and shots. Players neither block nor hurt teammates.
-- Defeated players return after three seconds with brief protection. Mages return after eight seconds.
+- WASD / arrow keys: move. Mouse: aim. Hold left / release: charge / normal attack. Right click / hold: class special.
+- Trees, stone walls, and map edges stop movement and shots. Players never block each other. Testing and Story disable friendly fire; in Fight, attacks damage other players but never their owner.
+- Testing: players return after three seconds; enemies after eight seconds. Story: one player life, one extra ordinary-enemy life, and one boss life.
+- Fight: all five maps, up to three rival players, no monsters, unlimited three-second respawns with brief protection. Class attacks, gear, potions and cooldowns work as usual. Kills count for the current room only; no loot or story progress is awarded. Packed potions are spent on entry, as in other modes.
+- R: consume one packed health potion for up to 50 HP. Full health does not waste a potion.
 - The camera follows you. The HUD shows health, party, and room information. Copy invite shares this room; Leave returns to the lobby.
 - Controls clear when focus is lost. A dropped connection pauses input and allows 15 seconds to recover, then returns to the lobby.
 
+## Audio
+
+The brass **Audio on/off** button at the top left of both screens controls music and effects; its preference is saved in this browser. Audio starts on page load when the browser permits autoplay, otherwise on the first click, tap or keypress anywhere on the page. It pauses when the page loses focus, and resumes when you return (some mobile browsers may require another tap). Unsupported browsers continue silently.
+
+Original synthesized menu/adventure melodies accompany clicks, major actions, three class attacks and specials, charging and its sweet spot, player/monster damage, enemy attacks, deaths, respawning, potion use, loot and Story results. Nearby combat fades with distance. Charging follows the immediate local ring; attacks, damage and pickups follow confirmed server state. No audio files, external samples, dependencies or extra server messages are needed.
+
+`client/src/audio/music.ts` holds two original 16-bar scores: a gentle G-major menu theme in 6/8 with flute-like melody and plucked accompaniment, and a D-minor adventure theme in 4/4 with lower strings and soft drums. Each loops in roughly 32–35 seconds. `sounds.ts` holds typed effect recipes; `synth.ts` renders tones/noise; `audio.ts` manages playback, charging, music and mute; `audio-ui.ts` wires accessible buttons; `game-audio.ts` compares authoritative snapshots without replaying old sounds on reconnect. To add a cue, add its recipe and call `audio.play()` from the relevant presentation event. Web Audio is independent of Phaser's disabled sound manager, so the menu and adventure share one context.
+
 ## Module ownership and networking
 
-`shared/` owns the authored map, balance constants, input contracts, synchronized schema, collision geometry, and deterministic movement. It compiles to JavaScript and declarations. It uses no Phaser or DOM APIs.
+`shared/` owns the authored maps, balance constants, input contracts, synchronized schema, collision geometry, and deterministic movement. It compiles to JavaScript and declarations. It uses no Phaser or DOM APIs.
 
-`server/` owns room lifecycle and the authoritative simulation: input validation, movement, AI, cooldowns, projectiles, damage, deaths, and respawns. Each room has an isolated simulation, a maximum of three players, a 30 Hz fixed step, and a 50 ms patch interval. Public discovery uses Colyseus's built-in lobby; invite rooms use its private setting.
+`server/` owns PostgreSQL accounts, sessions, migrations, authenticated room entry, room lifecycle and the authoritative simulation: input validation, movement, AI, cooldowns, projectiles, damage, deaths, and respawns. Each room has an isolated simulation, a maximum of three players, a 30 Hz fixed step, and a 50 ms patch interval. Public discovery uses Colyseus's built-in lobby; invite rooms use its private setting.
 
-`client/` owns the HTML/CSS lobby and Phaser rendering, generated pixel art, input sampling, local prediction, and remote interpolation. Colyseus prediction acknowledges inputs and replays pending movement against authoritative state. Local terrain collisions use the shared movement function. Remote entities use a 100 ms interpolation buffer; respawns snap. Projectiles and damage remain authoritative. Development diagnostics expose latency and reconciliation drift. Add `?debug=1` to enable the Colyseus SDK panel.
+`client/` owns the account UI, class selection, HTML/CSS lobby and Phaser rendering, generated pixel art, input sampling, local prediction, and remote interpolation. Colyseus prediction acknowledges inputs and replays pending movement against authoritative state. Local terrain collisions use the shared movement function. Remote entities use a 100 ms interpolation buffer; respawns snap. Projectiles and damage remain authoritative. Development diagnostics expose latency and reconciliation drift. Add `?debug=1` to enable the Colyseus SDK panel.
 
-Inputs carry movement, aim, and fire intent, never positions or hit results. Server processing is bounded to one input per player per fixed step with bounded queues. Swept collision detects projectile impacts between steps. Reconciliation performs movement only, avoiding repeated presentation effects.
+Inputs carry movement, aim, normal-attack and special-attack intent, never positions or hit results. Server processing is bounded to one input per player per fixed step with bounded queues. Swept collision detects projectile impacts between steps. Reconciliation performs movement only, avoiding repeated presentation effects.
 
 ## Verification and limitations
 
-Unit tests cover movement normalization, walls, corners, boundaries, swept projectile collision, cooldowns, respawns, input sanitation, flooding, and prediction/replay. Integration tests use real Colyseus rooms to cover isolation, discovery/privacy, capacity, leave/reconnect, and authoritative combat. Browser tests exercise three sessions and delayed/jittered network traffic. See [verification results](docs/verification.md) for the recorded results and reproducible checks.
+Unit tests cover map spawn safety and reachability, enemy pursuit/telegraphs/leashes, movement normalization, walls, corners, boundaries, swept projectile collision, cooldowns, respawns, input sanitation, flooding, and prediction/replay. Integration tests use real Colyseus rooms to cover isolation, discovery/privacy, capacity, leave/reconnect, and authoritative combat. Browser tests exercise three sessions and delayed/jittered network traffic. See [verification results](docs/verification.md) for the recorded results and reproducible checks.
 
 Browser verification targets Chromium; Firefox and Safari have not been tested.
 
-Original placeholder pixel textures and directional sprite frames are generated in Canvas. There are no external art assets. Desktop keyboard/mouse only; no touch controls or audio. There is one map and one enemy type. No projectile prediction, historical hit rewinding, persistent progression, or production security/operations layer.
+Original placeholder pixel textures and directional sprite frames are generated in Canvas. There are no external raster art assets; the favicon is an original SVG. Desktop keyboard/mouse only; no touch controls. Browser audio uses Web Audio; browsers that block autoplay require an initial click, tap or keypress. Five compact maps share three enemy behaviors with fifteen themed appearances. No projectile prediction, historical hit rewinding, saved in-progress expeditions, or production security/operations layer. Equipped gear overlays the original or custom skin.
 
 For file-level ownership and future boundaries, see [architecture notes](docs/architecture.md).
 
 ## Long-term RPG vision (not implemented)
 
-Each story will be an independent instance of the same authored world with saved progression and up to three players. Accounts will own characters and inventories. Story ownership and guest access will be distinct from temporary room connections. Future content includes levels, bosses, loot, equipment, and progression.
+Each story will be an independent instance of the same authored world with saved progression and up to three players. Accounts currently own skins, collected equipment, stored potions, and story map unlocks. Future character inventories will extend this foundation. Story ownership and guest access will be distinct from temporary room connections. Future content includes persistent levels, richer boss encounters, expanded equipment and progression.
 
-A future browser skin editor will provide a standard sprite/animation template, preview, validation, publishing, and shop discovery. Cosmetics will remain separate from gameplay hitboxes and stats. Persistence, asset storage, and moderation arrive with that feature.
+The first browser skin editor now includes templates, preview, validation and persistence. Future publishing and shop discovery will add asset distribution and moderation. Cosmetics remain separate from gameplay hitboxes and stats.
 
-Accounts, databases, saved stories, inventory, loot, bosses, editor, shop, payments, chat, and deployment infrastructure are deliberately outside this prototype.
+Saved story instances, player-to-player trading, skin marketplace, payments, chat, and deployment infrastructure remain outside this prototype. Session revocation broadcasts currently cover one server process; distributed revocation belongs with future multi-process hosting.
 
 ## Upstream foundations
 

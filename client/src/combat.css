@@ -1,0 +1,17 @@
+.abilities { position:absolute; bottom:62px; left:50%; transform:translateX(-50%); display:flex; gap:10px; pointer-events:none; }
+.ability { width:228px; display:flex; align-items:center; gap:11px; padding:12px; border:1px solid #5d6650; border-radius:5px; background:linear-gradient(135deg,#142b26f5,#172921ee); box-shadow:0 4px 15px #081d2366,inset 0 0 0 3px #b9a77409; color:#a3ad94; }
+.ability-rune { width:36px; height:36px; display:grid; place-items:center; flex-shrink:0; border:1px solid #6a7058; border-radius:50%; background:#263b2e; }
+.ability-rune svg { width:25px; height:25px; }
+.ability-body { flex:1; min-width:0; }
+.ability small { display:block; font-size:8px; letter-spacing:1.3px; color:#b9c0a3; }
+.ability strong { display:block; margin:4px 0 8px; font-size:12px; color:#eee1ba; font-weight:500; }
+.ability-time { font-size:10px; font-variant-numeric:tabular-nums; min-width:30px; text-align:right; }
+.ability-track { height:3px; background:#44503b; overflow:hidden; }
+.ability-track i { display:block; height:100%; background:linear-gradient(90deg,#718b61,#eed596); transform-origin:left; }
+.ability.ready { border-color:#b9a56e; color:#ead59c; animation:ability-ready .65s ease-out; }
+.ability.ready .ability-rune { border-color:#c5b078; box-shadow:0 0 12px #d1b66926; }
+.ability.active { border-color:#f0dd9d; color:#f8e4a3; box-shadow:0 0 18px #f2dca233; }
+.ability.unavailable { opacity:.5; }
+@keyframes ability-ready { 0% { box-shadow:0 0 22px #ebd99a99; } 100% { box-shadow:0 4px 15px #081d2366; } }
+@media(max-width:760px) { .abilities { bottom:65px; gap:6px; } .ability { width:174px; gap:7px; padding:8px; } .ability-rune { width:28px; height:28px; } .ability-rune svg { width:21px; height:21px; } .ability strong { font-size:11px; } .game-bottom>span:first-child { display:none; } }
+@media(prefers-reduced-motion:reduce) { .ability.ready { animation:none; } }

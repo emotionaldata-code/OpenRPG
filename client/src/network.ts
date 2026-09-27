@@ -1,14 +1,21 @@
 import { Client, Predict, CloseCode, type Room, type InputHandle, type Reconciler } from '@colyseus/sdk';
-import { MoveInput, movePlayer, RULES, type WorldState, type Player, type Intent } from '@openrpg/shared';
+import { MoveInput, movePlayer, RULES, getMap, type GameMap, type WorldState, type Player, type Intent } from '@openrpg/shared';
 export type GameRoom = Room<WorldState>;
-export const client = new Client(import.meta.env.VITE_SERVER_URL ?? `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:2567`);
+export const client = new Client(import.meta.env.VITE_SERVER_URL ?? (import.meta.env.PROD ? location.origin : `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.hostname}:2567`));
 export class GameNetwork {
+  readonly map: GameMap;
   readonly predict: Predict<WorldState>;
   readonly input: InputHandle<MoveInput>;
   private local?: Reconciler<Player, Intent>;
   private generations = new Map<object, string>();
   connected = true;
+  private observedElapsed = -1;
+  private observedAt = 0;
+  get serverTime(): number {
+    return this.room.state.elapsed + (this.connected ? Math.min(RULES.patchMs * 2, performance.now() - this.observedAt) : 0);
+  }
   constructor(readonly room: GameRoom) {
+    this.map = getMap(room.state.mapId);
     this.input = room.input({ type: MoveInput });
     this.predict = Predict.get(room, { mode: 'lerp', delay: RULES.interpolationMs, snap: 70 });
     this.predict.attachAll('players', { fields: ['x', 'y'], mode: 'lerp', snap: 70 });
@@ -22,11 +29,14 @@ export class GameNetwork {
   private onOffline = (): void => { if (this.connected) this.room.connection.close(CloseCode.MAY_TRY_RECONNECT); };
   private onDrop = (): void => { this.connected = false; };
   private onReconnect = (): void => { this.connected = true; this.local?.reset(); };
-  frame(now: number, intent: Intent): void {
+  frame(now: number, intent: Intent): boolean {
+    if (this.observedElapsed !== this.room.state.elapsed) { this.observedElapsed = this.room.state.elapsed; this.observedAt = performance.now(); }
     const self = this.room.state.players.get(this.room.sessionId);
     if (self && !this.local) {
       this.local = this.predict.reconciler(self, {
-        input: this.input, step: (ctx, p, cmd) => movePlayer(p, cmd, ctx.dt),
+        // Combat timers/effects stay authoritative; only movement fields are replayed.
+        fields: ['x', 'y', 'aim', 'hp', 'connected'],
+        input: this.input, step: (ctx, p, cmd) => { if (this.room.state.outcome !== 'failed' && this.room.state.saveStatus !== 'error') movePlayer(p, cmd, ctx.dt, this.map.obstacles); },
         smoothMs: 65, snap: 70, warnOnDivergence: import.meta.env.DEV ? 8 : undefined,
       });
     }
@@ -43,8 +53,9 @@ export class GameNetwork {
     const current = new Set<object>([...this.room.state.players.values(), ...this.room.state.mobs.values()]);
     for (const entity of this.generations.keys()) if (!current.has(entity)) this.generations.delete(entity);
     const steps = this.predict.tick(now);
-    if (!this.connected) return;
+    if (!this.connected) return false;
     for (let i = 0; i < steps; i++) { Object.assign(this.input.data, intent); this.input.send(); }
+    return steps > 0;
   }
   diagnostics(): { rtt: number; drift: number; pending: number; x: number; y: number } {
     return { rtt: this.room.clock.smoothedRtt(), drift: this.local?.drift.ema ?? 0, pending: this.input.pendingCount, x: this.local?.state.x ?? 0, y: this.local?.state.y ?? 0 };

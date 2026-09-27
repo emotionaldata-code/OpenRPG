@@ -1,0 +1,27 @@
+name: openrpg
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    init: true
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in Dokploy}
+      APP_ORIGIN: ${APP_ORIGIN:?Set APP_ORIGIN in Dokploy}
+      PORT: "2567"
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:-1}
+    expose:
+      - "2567"
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - "fetch('http://127.0.0.1:2567/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+    stop_grace_period: 30s

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" shape-rendering="crispEdges">
+  <rect width="32" height="32" rx="6" fill="#14261f"/>
+  <!-- An overgrown watchtower arch, drawn on a two-pixel grid. -->
+  <path fill="#d3bc84" d="M10 6h12v4h4v16h-6V12h-8v14H6V10h4Z"/>
+  <path fill="#9c936b" d="M6 18h6v2H6zM20 14h6v2h-6zM16 6h2v4h-2z"/>
+  <path fill="#739561" d="M6 6h4v8H6zM10 10h4v4h-4zM22 20h4v6h-4z"/>
+  <path fill="#416846" d="M4 26h24v2H4zM4 22h2v4H4zM26 24h2v2h-2z"/>
+  <path fill="#ead69c" d="M26 4h2v2h-2zM16 18h2v2h-2z"/>
+</svg>
