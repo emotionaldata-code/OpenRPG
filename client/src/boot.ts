@@ -1,4 +1,4 @@
-import { hideLoading, loadingFailed } from './loading';
+import { hideLoading, loadingFailed } from './ui/loading';
 
 // Keep the first screen independent of Phaser and the application stylesheet.
 const slowLoad = window.setTimeout(() => {

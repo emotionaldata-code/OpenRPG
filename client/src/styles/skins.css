@@ -1,0 +1,284 @@
+/* A small pixel workshop, sharing the passport's moss and brass palette. */
+.wardrobe-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 18px;
+  padding: 18px 0;
+  border-top: 1px solid #52624966;
+}
+.wardrobe-link p {
+  margin: 5px 0 0;
+  color: #a1b097;
+  font-size: 12px;
+}
+#wardrobe-status {
+  color: #d5be88;
+  font-size: 12px;
+}
+.skin-choice {
+  margin: 20px 0 26px;
+}
+.skin-choice select {
+  width: 100%;
+}
+.skin-choice small {
+  display: block;
+  margin-top: 8px;
+  color: #a1b097;
+  font-size: 11px;
+}
+#skin-editor {
+  width: min(1120px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px);
+  box-sizing: border-box;
+  padding: 28px;
+  color: #e0dec7;
+  background: radial-gradient(ellipse at top left, #304936, #172b23 65%);
+  border: 1px solid #a18e5c;
+  border-radius: 14px;
+  box-shadow: 0 24px 100px #0009;
+}
+#skin-editor::backdrop {
+  background: #08170ee0;
+  backdrop-filter: blur(5px);
+}
+#skin-editor button {
+  border-radius: 5px;
+  padding: 10px 12px;
+}
+#skin-editor button:focus-visible,
+#skin-editor select:focus-visible,
+#skin-editor input:focus-visible {
+  outline: 2px solid #e1c689;
+  outline-offset: 3px;
+}
+.studio-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+}
+.studio-header h2 {
+  font:
+    42px/1.1 'Libre Caslon Display',
+    Georgia,
+    serif;
+  margin: 8px 0;
+}
+.studio-library {
+  border-block: 1px solid #87926944;
+  padding: 16px 0 12px;
+  margin: 20px 0 24px;
+}
+.studio-library select {
+  flex: 1;
+  min-width: 0;
+}
+.studio-library label,
+.studio-tools label,
+.tool-label,
+.frame-controls label {
+  font-size: 10px;
+  letter-spacing: 1.2px;
+  color: #c3c6a9;
+}
+#skin-count {
+  font-size: 11px;
+  color: #a1b097;
+}
+.studio-layout {
+  display: grid;
+  grid-template-columns: 220px minmax(290px, 1fr) 240px;
+  gap: 28px;
+}
+.studio-tools {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.studio-tools > label:not(:first-child),
+.studio-tools > .tool-label {
+  margin-top: 8px;
+}
+.studio-tools label small {
+  letter-spacing: 0;
+  text-transform: none;
+  color: #a1b097;
+}
+.studio-tools input:not([type='color']) {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.pixel-tools {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+#skin-editor [aria-pressed='true'] {
+  border-color: #d4ba77;
+  background-color: #3f4d32;
+  color: #f0d89d;
+  box-shadow: inset 0 0 0 1px #d4ba77;
+}
+#skin-palette {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 5px;
+}
+#skin-palette button {
+  padding: 0;
+  height: 28px;
+  min-width: 0;
+  border: 1px solid #839078;
+  color: white;
+}
+#skin-palette button[aria-pressed='true'] {
+  outline: 2px solid #ebd195;
+  outline-offset: 1px;
+  box-shadow: none;
+}
+.color-row {
+  display: flex;
+  gap: 8px;
+}
+#skin-color {
+  flex: 1;
+  height: 38px;
+  padding: 3px;
+  min-width: 0;
+}
+.studio-hint {
+  color: #a1b097;
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.studio-drawing {
+  min-width: 0;
+  text-align: center;
+}
+.frame-controls,
+.drawing-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.frame-controls select {
+  padding: 8px;
+  font-size: 12px;
+}
+.pixel-scroll {
+  overflow: auto;
+  max-height: 470px;
+  margin: 16px 0;
+  border: 1px solid #6c7c58;
+  background: #152a22;
+  border-radius: 5px;
+}
+#skin-board {
+  display: block;
+  margin: auto;
+  image-rendering: pixelated;
+  cursor: crosshair;
+  touch-action: none;
+  max-width: none;
+}
+.drawing-actions {
+  font-size: 12px;
+}
+.studio-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+#skin-live {
+  height: 210px;
+  width: 240px;
+  align-self: center;
+  border-radius: 100px 100px 10px 10px;
+  overflow: hidden;
+  border: 1px solid #758060;
+}
+#skin-live canvas {
+  display: block;
+  image-rendering: pixelated;
+}
+.preview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.preview-toggle input {
+  width: auto;
+  accent-color: #c8b47a;
+}
+#skin-save {
+  margin-top: 12px;
+}
+#skin-status {
+  min-height: 18px;
+  color: #ebce88;
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.6;
+}
+@media (max-width: 1000px) {
+  .studio-layout {
+    grid-template-columns: 190px minmax(290px, 1fr);
+    gap: 20px;
+  }
+  .studio-preview {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+  }
+  .studio-preview > .eyebrow {
+    grid-column: 1 / -1;
+  }
+  #skin-live {
+    grid-row: span 4;
+  }
+}
+@media (max-width: 620px) {
+  #skin-editor {
+    padding: 18px;
+  }
+  .studio-header h2 {
+    font-size: 32px;
+  }
+  .studio-layout {
+    display: flex;
+    flex-direction: column;
+  }
+  .studio-tools {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .studio-tools > label,
+  .studio-tools > .tool-label,
+  #skin-palette,
+  .pixel-tools,
+  .studio-tools > .studio-hint {
+    grid-column: 1 / -1;
+  }
+  .studio-tools > label {
+    margin-top: 6px;
+  }
+  .studio-preview {
+    display: flex;
+  }
+  .library-controls {
+    flex-wrap: wrap;
+  }
+  .studio-library select {
+    flex-basis: 100%;
+  }
+}

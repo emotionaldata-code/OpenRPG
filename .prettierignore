@@ -1,0 +1,6 @@
+node_modules/
+**/dist/
+.agents/
+test-results/
+playwright-report/
+package-lock.json

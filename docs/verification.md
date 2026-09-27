@@ -1,5 +1,52 @@
 # Verification record
 
+## Unrestricted boss encounters and Story enemy lives — 2026-09-28
+
+- Removed the boss seal and its synchronized flag, damage gate and client visuals. Bosses can fight while guards remain alive; music still follows the first confirmed hit.
+- Story enemies have one life. Completion still requires every enemy to be defeated, in any order. Testing retains unlimited respawns.
+- Regression coverage checks melee/projectile damage and boss attacks with all guards alive on every map in both modes, permanent Story deaths beyond the respawn timer, and first-life Story completion/progression.
+- `npm run check` passed: lint, formatting, typechecks, 142 unit/integration tests and production builds. Existing Phaser chunk-size warning remains. Browser route assertions were updated and typechecked; browser scenarios were not rerun for this change.
+
+
+## Distinct map layouts and charge-only normal attacks — 2026-09-27
+
+- Each realm now has its own file under `shared/src/world/routes/`: Forest forks, Castle chambers with offset doors, Paradise garden loops, Hell islands and bridges, and Mountain switchbacks. All actor footprints can reach every encounter. Additional checks verify alternative garden paths, castle doorways, island separation and the mountain’s required westward traversal.
+- Normal attacks retain class charge durations and sweet-spot damage, with no post-release cooldown. `lastAttackAt` records confirmed releases for audio; it never gates attacks. Armor shortens primary charge time and special cooldowns. The HUD and ring no longer show normal recovery.
+- `npm run check` passed lint, formatting, typechecks, **128 unit/integration tests** and all builds. Coverage includes immediate recharging for all classes, one hit per release, unchanged special deadlines, armor timing, cancellation, and alternating press/release flooding through the real fixed-step input queue. The existing Phaser bundle-size warning remains.
+- **Four targeted Chromium scenarios passed across focused runs**: all five map previews/create/render/leave; charge/release/recharge/overcharge/blur/reconnect for every class, normally and at approximately 150 ms RTT with jitter; and a Forest route clearing guards, unlocking the boss, confirming first-hit music and returning to the menu. Browser runs used `--trace off`. Delayed cancellation waits for its authoritative patch instead of a fixed 350 ms sleep; the route smoke permits Testing’s normal death/respawn behavior. Early runs exposed those test assumptions. Final browser test files also passed lint, formatting and typechecks.
+- Visually inspected a combined render of all five layouts. Local simulation CPU smoke: three rooms, nine players, 36 enemies, 3,000 ticks; combined mean **0.62 ms**, p95 **2.36 ms**, maximum **9.69 ms**. This is a local CPU check, not a deployment capacity guarantee.
+- Updated README and architecture ownership/timing notes. No dependencies or database migrations added.
+
+## Linear routes, difficulty ramp and boss music — 2026-09-27
+
+- Reauthored the five maps as 3456 × 1024 journeys with solid corridor banks, bends, cover and a final arena. Every player/enemy footprint can navigate from camp to all encounters. Encounter counts are now 5/7/8/10/12, and boss rotations contain 2/3/4/5/7 distinct patterns.
+- Forest has slower movement/strafe, weaker hits, longer warnings and pauses, and a 450-HP boss. Mountain has more mixed encounters, faster warnings/projectiles, stronger enrage and a 1440-HP boss. Shared typed configuration owns the difficulty progression.
+- Added authoritative boss seals and engagement state. Tests cover both melee/projectile rejection while sealed, every guard’s required lives in Testing/Story, sticky unlock through Testing respawns, and first-hit engagement. Audio tests cover mute, reconnect, retreat, death, outcome and respawn behavior without replaying old effects.
+- `npm run check` passed: lint, formatting, workspace/test typechecks, **126 unit/integration tests**, and all production builds. Focused seal/audio tests were rerun after adding further assertions. Existing Phaser bundle warning remains.
+- **Nine targeted Chromium scenarios passed across focused runs**: all-map preview/create/render/leave; four audio scenarios (including offline rendering of all 40 music bars); all five Fight maps; three-player damage/respawns normally and at approximately 150 ms RTT with jitter; and an actual Forest guard-to-boss route using keyboard/mouse controls. The route check confirms the seal opens, first damage changes the score, and leaving restores menu music. It uses quick warrior sweeps; charge timing and boss death/reset behavior have separate tests. The route smoke passed with `--trace off`; the other checks used the usual tracing configuration. Menu/map/boss screenshots were inspected. Early attempts exposed unsuitable bot aiming/charging assumptions; a rebuild and overlapping trace output also interrupted early runs. The final checks used stable builds and separate runs.
+- Three-room CPU smoke check: nine players, **36 enemies**, active bosses, 3,000 ticks; combined mean **0.45 ms**, p95 **2.20 ms**, maximum **16.16 ms** against the 33.33 ms tick interval. This is local simulation CPU, not a deployment capacity estimate.
+- No dependencies, database migrations, external art/music assets or extra network message streams were added. Test accounts are cleaned up after browser runs.
+
+## Larger realms and enemy tactics — 2026-09-27
+
+- Expanded all five realms to 2304 × 1728 (2.56× the original area), with authored lakes, ramparts, terraces, lava causeways, chasms, named regions and distinct boss arena motifs. Encounter counts increase from six to ten in story order. Testing/Story life rules and player-only Fight remain intact.
+- Added typed attack rotations, gap-closing charges, staggered bursts, paired cross volleys and marked ground blasts. Melee flank; ranged enemies retreat/strafe; bosses lead movement slightly and enrage below half health. Wind-ups lock their geometry and retain their full dodge window during enrage.
+- `npm run check`: lint, formatting, typechecks, **123 unit/integration tests**, and production builds passed. The 16 new tests cover increasing mechanical difficulty, large-footprint navigation through every map, all five boss rotations/enrage/resets, locked warnings, swept charges, wall/immune/camp protection, burst cancellation, projectile limits, and escaping exact wall contact without cutting corners. Existing Phaser chunk-size warning remains.
+- CPU smoke check: `npx tsx scripts/benchmark-simulation.ts`, three Mountain simulations, nine players, **30 enemies**, 3,000 ticks. Combined tick cost: mean **0.54 ms**, p95 **5.48 ms**, maximum **12.59 ms**, against a 33.33 ms fixed-step interval on this development machine. Invulnerable moving test players keep encounters active. This measures simulation CPU only, not network/database throughput or deployment capacity.
+- **Eight targeted Chromium scenarios passed across focused runs**: preview/create/leave all five destinations, all five player-only Fight maps, ordinary and delayed three-player Fight damage/respawns, cooperative NPC combat/loot, a real walk into the expanded forest and boss warnings, delayed movement/abilities/recovery, and delayed charge/cancellation. The latency helper simulates approximately 150 ms RTT with jitter; maps/menu and boss-warning screenshots were inspected.
+- Updated browser coverage separates AI targeting from transport assertions: normal-latency cooperative combat pursues retreating mobs around cover; delayed damage uses a controlled PvP opponent, while delayed movement/abilities/recovery remain in Testing. This avoids requiring a scripted archer to defeat evasive enemies within a fixed time as a proxy for network correctness. The server/unit tests still assert full attack counts and collision outcomes. Initial browser runs also exposed the exact-wall-contact navigation bug (fixed and regression-tested); development reload/process interruptions were rerun after the server stabilized.
+- No new dependencies or database migrations. Mob schema adds locked warning coordinates/timing and enrage state; simulation cadence and client input messages are unchanged.
+
+## Code organization and linting — 2026-09-27
+
+- Grouped client features, game views/HUD, original art, UI helpers and styles; grouped shared world, protocol, profile, combat and inventory code. Public shared exports and synchronized schema remain compatible.
+- Extracted public room browsing, HUD messages, development diagnostics, shared client HTTP transport, server HTTP guards/errors and session cookies. Split inventory rules and moved workshop markup into a readable HTML template.
+- Added ESLint with TypeScript rules and type-aware promise checks, Prettier, root lint/format/check commands, lockfile updates and [development conventions](development.md). Comments explain authority, input bounds, replay, async lifetime and reward retries.
+- `npm run check` passed from cleared shared/server build output: lint, formatting, package/test typechecks, **107 unit/integration tests**, and all production builds. Five new HTTP-helper tests cover credentials, empty responses, expired sessions, malformed errors and transport failures. Existing Phaser chunk-size warning remains.
+- Full Chromium suite: **24 passed**, including three-player combat at 150 ms RTT with jitter, public/private room lifecycle, reconnection, respawns, charged attacks, accounts, skins, equipment, loot/shop and audio. Menu and arena screenshots inspected.
+- All **three skin-editor scenarios passed again** after extracting/formatting the final HTML template; production client build and formatting rechecked. The first editor rerun was blocked by the development watcher stopping while generated shared output was cleared; restarting that watcher restored the server, with no application fix needed.
+- No gameplay tuning, persistence schema or migration changes. Tooling requires Node 22.13+ (22.x) or 24+.
+
 ## Fight mode and audio startup — 2026-09-27
 
 - Added Fight beside Testing/Story: all five maps, three-player free-for-all, no mobs/AI, unlimited three-second respawns with existing protection. Shared combat handles player projectiles, specials and sword sectors, excludes self/dead/disconnected targets, and preserves terrain and immunity checks. Kills are room-local; no monster loot or story rewards.
@@ -162,3 +209,21 @@ The expanded suite initially exposed the existing account-attempt quota through 
 The new SQL migration was applied to the local Docker database and exercised in isolated up/down/up tests. No production database was contacted. Pending in-memory rewards cannot survive a process crash before reaching PostgreSQL; this remains documented rather than introducing a durable job system.
 
 Final verification: all 76 automated tests passed; build and strict typecheck passed; all 12 browser scenarios passed across runs. The final isolated 150 ms RTT/jitter scenario passed in 1.1 minutes, including gameplay and cleanup. Projectile checks now observe each attack when fired rather than requiring both mage projectiles to coexist after one can already hit terrain. The fixture leave helper avoids a second pending click during an asynchronous leave. A skin run encountered a transient module-loading failure; its isolated rerun passed. The HTML username pattern now escapes its hyphen for modern browser validation.
+
+## Shared Base Village
+
+The village tests cover station reachability, collision boundaries and building footprints. Real Colyseus clients verify authenticated admission, shared presence beyond the expedition's three-player limit, proximity checks, frozen movement during interaction, bounded/flooded input, appearance ownership, session revocation, reconnection and empty-room disposal. The automated unit/integration suite passes 132 tests.
+
+The new browser acceptance checks exercise login-only entry, shared visitors, walking to stations with real keyboard input, class changes, skin creation/equipping, all three portals, expedition return, inn logout/login, recovery, and invalid-room errors. A second scenario uses three isolated browser sessions with approximately 150 ms RTT and jitter, including station activity and preventing movement while typing in dialogs. Both pass with no page errors. Existing account, inventory, skin and gameplay browser checks now navigate through the village; diagnostics only read state and do not teleport players.
+
+Scene cleanup listens for both Phaser shutdown and destroy: destroying an entire Game skips scene shutdown. This prevents village keyboard listeners or late skin responses leaking into subsequent expeditions. Failed expedition joins restore the portal dialog after the loading screen releases input. No database migration or new dependency is required. The 24-visitor village limit is a configured room capacity, not a production load-test claim.
+
+Final village verification: `npm run check` passes (lint, formatting, strict types, 132 automated tests and all builds). All 28 browser scenarios pass across the regression runs, including three-player cooperative/PvP combat and village movement with 150 ms RTT/jitter. Earlier failures from old menu selectors, snapshot timing and automated walking around the inn were corrected and rerun; the final targeted batch passes all eight scenarios. Login, village, equipment and narrow-screen collection screenshots were inspected. Vite retains the existing large Phaser chunk warning.
+
+### Village collision and label polish
+
+Building collision now covers the full roof-to-door silhouette from a shared building catalog. Regression checks approach every building from all sides and diagonal roof corners; station reachability remains covered. Village and expedition map labels render at 3× text resolution with independent filtering, larger secondary labels and lighter outlines.
+
+A real-room integration test fills a village with 24 connections, verifies that connection 25 enters another village, and checks public discovery and invite joining across those villages. `npm run check` passes with 134 tests. Seven leftover local browser-fixture accounts were identified by both generated username patterns and known test passwords, then removed through the authenticated account API; no bot-spawning code exists in the game.
+
+Both village browser scenarios pass, including three visitors at approximately 150 ms RTT with jitter. The walking helper now rechecks proximity after releasing its keys so automation latency cannot turn an arrival into an overshoot. The village screenshot was inspected for label readability; all six services remain reachable.

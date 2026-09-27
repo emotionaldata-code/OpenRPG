@@ -1,0 +1,393 @@
+/* Shared controls: forest greens, warm parchment, restrained brass details. */
+:root {
+  --ui-gold: #d3bc84;
+  --ui-border: #637052;
+  --ui-ink: #e6e0c8;
+  --ui-muted: #afbea2;
+}
+
+button,
+input,
+select {
+  font-family: inherit;
+}
+button,
+input,
+select,
+summary {
+  -webkit-tap-highlight-color: transparent;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+button:disabled:hover {
+  transform: none;
+}
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible {
+  outline: 2px solid var(--ui-gold);
+  outline-offset: 3px;
+}
+button {
+  box-shadow: inset 0 1px #ffffff08;
+}
+button:not(:disabled):active {
+  translate: 0 1px;
+}
+input:not([type='checkbox']):not([type='color']):hover {
+  border-color: #84946b;
+}
+input:not([type='checkbox']):not([type='color']):focus {
+  border-color: var(--ui-gold);
+}
+select {
+  appearance: none;
+  color: var(--ui-ink);
+  background-color: #182e24;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='m1 1 5 5 5-5' fill='none' stroke='%23d3bc84' stroke-width='1.5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 13px center;
+  border: 1px solid var(--ui-border);
+  border-radius: 5px;
+  padding: 11px 36px 11px 13px;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  text-overflow: ellipsis;
+  transition:
+    border-color 0.15s,
+    background-color 0.15s;
+}
+select:hover {
+  border-color: #a3a877;
+  background-color: #233c2c;
+}
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+select option {
+  background: #1b3026;
+  color: var(--ui-ink);
+}
+.frame-controls select {
+  padding: 8px 30px 8px 10px;
+}
+
+/* Keep native keyboard/touch semantics; older browsers retain their own picker. */
+@supports (appearance: base-select) {
+  select,
+  select::picker(select) {
+    appearance: base-select;
+  }
+  select {
+    background-image: none;
+    padding-right: 13px;
+    gap: 16px;
+  }
+  select::picker-icon {
+    color: var(--ui-gold);
+    transition: rotate 0.15s;
+  }
+  select:open::picker-icon {
+    rotate: 180deg;
+  }
+  select:open {
+    border-color: var(--ui-gold);
+  }
+  select::picker(select) {
+    color: var(--ui-ink);
+    background: #1b3026;
+    border: 1px solid #a49160;
+    border-radius: 6px;
+    padding: 5px;
+    margin-block: 5px;
+    box-shadow: 0 12px 32px #07160ecc;
+    max-height: min(320px, 60dvh);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #70805b #1b3026;
+  }
+  select option {
+    border-radius: 3px;
+    padding: 10px 12px;
+    gap: 10px;
+    font:
+      12px/1.5 'DM Sans',
+      sans-serif;
+    overflow-wrap: anywhere;
+  }
+  select option:checked {
+    color: #f0d99f;
+    background: #34472f;
+  }
+  select option:hover,
+  select option:focus {
+    background: #42543a;
+    outline: none;
+  }
+  select option::checkmark {
+    color: var(--ui-gold);
+  }
+  .frame-controls select {
+    padding-right: 10px;
+  }
+}
+
+.primary {
+  background: linear-gradient(#dec991, #cbb078);
+}
+.primary:hover {
+  background: linear-gradient(#ebd79f, #d9bf87);
+}
+.entry,
+.account-card {
+  border-color: #59664a;
+}
+.entry > h2 {
+  margin-top: 10px;
+}
+.account-card .section-top {
+  gap: 12px;
+}
+.account-identity p,
+.account-note,
+.muted {
+  color: var(--ui-muted);
+}
+.wardrobe-link {
+  margin-top: 0;
+}
+.wardrobe-link strong {
+  font:
+    20px Georgia,
+    serif;
+  color: #e1d4ad;
+}
+.wardrobe-link button {
+  flex-shrink: 0;
+}
+#wardrobe-status:empty {
+  display: none;
+}
+.visibility small {
+  font-size: 10px;
+}
+.class-note {
+  line-height: 1.6;
+}
+#rooms {
+  scrollbar-width: thin;
+  scrollbar-color: #70805b #1b3026;
+}
+#status:not(:empty),
+#account-status:not(:empty) {
+  padding: 10px 12px;
+  background: #12291e80;
+  border-left: 2px solid #a99562;
+  border-radius: 0 4px 4px 0;
+}
+.room-row span {
+  white-space: nowrap;
+}
+.room-row button {
+  min-height: 32px;
+}
+.skin-choice .field-label {
+  margin-bottom: 8px;
+}
+
+/* Workshop hierarchy: saved designs, editing tools, preview, feedback. */
+body:has(dialog[open]) {
+  overflow: hidden;
+}
+#skin-editor {
+  scrollbar-width: thin;
+  scrollbar-color: #8b9266 #1b3026;
+  scroll-padding-block: 145px 80px;
+}
+.studio-header {
+  position: sticky;
+  top: -28px;
+  z-index: 2;
+  margin: -28px -28px 0;
+  padding: 28px 28px 16px;
+  background: #263d2e;
+  border-bottom: 1px solid #87926944;
+}
+.studio-subtitle {
+  color: var(--ui-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  margin: 0;
+}
+.studio-header > button {
+  flex-shrink: 0;
+}
+.library-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.library-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.library-controls button {
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.studio-library .studio-hint {
+  margin-bottom: 0;
+}
+.studio-tools button {
+  font-size: 12px;
+}
+.studio-tools > .tool-label {
+  display: block;
+}
+.color-row button {
+  white-space: nowrap;
+}
+#skin-color {
+  cursor: pointer;
+  border-color: var(--ui-border);
+  background: #182e24;
+}
+#skin-color::-webkit-color-swatch-wrapper {
+  padding: 2px;
+}
+#skin-color::-webkit-color-swatch {
+  border: 0;
+  border-radius: 2px;
+}
+#skin-color::-moz-color-swatch {
+  border: 0;
+  border-radius: 2px;
+}
+#skin-palette button {
+  border-radius: 3px;
+}
+#skin-palette button:first-child {
+  background-image: repeating-conic-gradient(#687563 0% 25%, #263b31 0% 50%);
+  background-size: 10px 10px;
+}
+.pixel-scroll {
+  box-shadow: inset 0 0 24px #06190f60;
+}
+.studio-save {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #87926944;
+}
+.studio-save .primary {
+  margin-top: 0;
+}
+.studio-footer {
+  position: sticky;
+  bottom: -28px;
+  z-index: 2;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: 24px -28px -28px;
+  padding: 14px 28px;
+  background: #1b3026;
+  border-top: 1px solid #87926944;
+}
+#skin-draft-state {
+  font-size: 11px;
+  color: var(--ui-muted);
+}
+.preview-toggle {
+  cursor: pointer;
+}
+.preview-toggle input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.confirmation {
+  width: min(440px, calc(100vw - 32px));
+  padding: 28px;
+  color: var(--ui-ink);
+  background: linear-gradient(135deg, #2c4231, #1b3026);
+  border: 1px solid #a49160;
+  border-radius: 9px;
+  box-shadow: 0 24px 80px #0009;
+}
+.confirmation::backdrop {
+  background: #08170ebf;
+  backdrop-filter: blur(3px);
+}
+.confirmation h2 {
+  font-size: 32px;
+  margin: 12px 0;
+}
+.confirmation p {
+  font-size: 13px;
+  color: #c3cbb2;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.confirmation-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 24px;
+}
+.confirmation-actions button {
+  font-size: 12px;
+}
+.confirmation .danger {
+  background: #50382c;
+}
+
+@media (max-width: 620px) {
+  .studio-header {
+    top: -18px;
+    margin: -18px -18px 0;
+    padding: 18px;
+  }
+  .studio-subtitle {
+    max-width: 240px;
+  }
+  .studio-tools > .tool-label {
+    grid-column: 1 / -1;
+  }
+  .library-controls button {
+    flex: 1;
+  }
+  .studio-save {
+    width: 100%;
+  }
+  .studio-footer {
+    bottom: -18px;
+    margin: 24px -18px -18px;
+    padding: 12px 18px;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .confirmation {
+    padding: 22px;
+  }
+  .visibility small {
+    font-size: 9px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  button,
+  input,
+  select,
+  select::picker-icon {
+    transition: none;
+  }
+}

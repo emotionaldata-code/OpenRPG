@@ -10,7 +10,7 @@
     "client"
   ],
   "engines": {
-    "node": ">=22.12.0"
+    "node": "^22.13.0 || >=24"
   },
   "scripts": {
     "dev": "npm run build -w @openrpg/shared && concurrently -k -n shared,server,client \"npm run dev -w @openrpg/shared\" \"npm run dev -w @openrpg/server\" \"npm run dev -w @openrpg/client\"",
@@ -23,13 +23,23 @@
     "db:down": "docker compose stop db",
     "db:migrate": "npm run db:migrate -w @openrpg/server",
     "db:rollback": "npm run db:rollback -w @openrpg/server",
-    "db:migration": "npm run db:migration -w @openrpg/server --"
+    "db:migration": "npm run db:migration -w @openrpg/server --",
+    "lint": "eslint . --max-warnings 0",
+    "lint:fix": "npm run lint -- --fix",
+    "format": "prettier --write \"{client,server,shared,tests,scripts}/**/*.{ts,css,json,html}\" \"*.{json,mjs}\"",
+    "format:check": "prettier --check \"{client,server,shared,tests,scripts}/**/*.{ts,css,json,html}\" \"*.{json,mjs}\"",
+    "check": "npm run lint && npm run format:check && npm run typecheck && npm test && npm run build"
   },
   "devDependencies": {
-    "typescript": "^5.9.3",
-    "tsx": "^4.21.0",
-    "concurrently": "^9.2.1",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.58.0",
     "@types/node": "^24.0.0",
-    "@playwright/test": "^1.58.0"
+    "concurrently": "^9.2.1",
+    "eslint": "^10.11.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.9",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.70.1"
   }
 }

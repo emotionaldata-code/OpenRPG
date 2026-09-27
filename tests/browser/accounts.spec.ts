@@ -1,10 +1,16 @@
+import { portal, services, accountStation } from '../helpers/village-browser.js';
 import { test, expect } from '@playwright/test';
-test('register without class, choose per-room appearance, retain login and delete account', async ({ page }) => {
+test.setTimeout(90000);
+test('register without class, choose per-room appearance, retain login and delete account', async ({
+  page,
+}) => {
   const username = `User${Math.random().toString(36).slice(2, 10)}`;
   const password = 'browser-test-password';
   await page.goto('/?room=invited-room');
-  await page.locator('#tab-adventurer').click(); await page.locator('#tab-register').click();
-  await page.locator('#username').fill(username); await page.locator('#password').fill(password);
+  await accountStation(page);
+  await page.locator('#tab-register').click();
+  await page.locator('#username').fill(username);
+  await page.locator('#password').fill(password);
   await expect(page.locator('#account-panel .class-options')).toHaveCount(0);
   await expect(page.locator('#registration-class')).toHaveCount(0);
   await page.locator('#auth-submit').click();
@@ -12,46 +18,106 @@ test('register without class, choose per-room appearance, retain login and delet
   await expect(page.locator('#room-id')).toHaveValue('invited-room');
   await expect(page.locator('#class-archer')).toHaveAttribute('aria-pressed', 'true');
   let classRequests = 0;
-  page.on('request', request => { if (request.url().includes('/api/auth/class')) classRequests++; });
-  await page.locator('#tab-adventure').click(); await expect(page.locator('#supplies-status')).toBeEmpty();
+  page.on('request', (request) => {
+    if (request.url().includes('/api/auth/class')) {
+      classRequests++;
+    }
+  });
+  await services(page);
+  await expect(page.locator('#supplies-status')).toBeEmpty();
+  await services(page);
   await page.locator('#class-warrior').click();
-  await page.locator('#create').click(); await expect(page.locator('#loading')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => { const s = window.__openrpg.snapshot()!; return s.state.players[s.sessionId]?.characterClass; })).toBe('warrior');
+  await portal(page);
+  await page.locator('#create').click();
+  await expect(page.locator('#loading')).toBeHidden();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const s = window.__openrpg.snapshot()!;
+        return s.state.players[s.sessionId]?.characterClass;
+      }),
+    )
+    .toBe('warrior');
   await expect(page.locator('#class-warrior')).toBeHidden();
-  await page.locator('#leave').click(); await page.locator('#class-mage').click();
-  await page.locator('#create').click(); await expect(page.locator('#loading')).toBeHidden();
-  await expect.poll(() => page.evaluate(() => { const s = window.__openrpg.snapshot()!; return s.state.players[s.sessionId]?.characterClass; })).toBe('mage');
+  await page.locator('#leave').click();
+  await services(page);
+  await page.locator('#class-mage').click();
+  await portal(page);
+  await page.locator('#create').click();
+  await expect(page.locator('#loading')).toBeHidden();
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const s = window.__openrpg.snapshot()!;
+        return s.state.players[s.sessionId]?.characterClass;
+      }),
+    )
+    .toBe('mage');
   await page.locator('#leave').click();
   expect(classRequests).toBe(0);
-  await page.reload(); await expect(page.locator('#class-archer')).toHaveAttribute('aria-pressed', 'true');
+  await page.reload();
+  await expect(page.locator('#class-archer')).toHaveAttribute('aria-pressed', 'true');
   await expect(page.locator('#account-name')).toHaveText(username);
   expect(await page.evaluate(() => document.cookie)).not.toContain('openrpg_session');
-  await page.locator('#tab-adventurer').click(); await page.locator('#logout').click(); await expect(page.locator('#auth-guest')).toBeVisible();
+  await accountStation(page);
+  await page.locator('#logout').click();
+  await expect(page.locator('#auth-guest')).toBeVisible();
   await expect(page.locator('#expedition-controls')).toBeHidden();
-  await page.locator('#username').fill(username.toLowerCase()); await page.locator('#password').fill('wrong-password');
-  await page.locator('#auth-submit').click(); await expect(page.locator('#account-status')).toContainText('Incorrect');
-  await page.locator('#password').fill(password); await page.locator('#auth-submit').click();
+  await page.locator('#username').fill(username.toLowerCase());
+  await page.locator('#password').fill('wrong-password');
+  await page.locator('#auth-submit').click();
+  await expect(page.locator('#account-status')).toContainText('Incorrect');
+  await page.locator('#password').fill(password);
+  await page.locator('#auth-submit').click();
   await expect(page.locator('#account-name')).toHaveText(username);
+  await accountStation(page);
   await page.locator('#account-settings summary').click();
-  await page.locator('#delete-toggle').click(); await page.locator('#delete-password').fill('wrong-password');
-  await page.locator('#delete-form button[type=submit]').click(); await expect(page.locator('#account-status')).toContainText('Incorrect');
-  await page.locator('#delete-password').fill(password); await page.locator('#delete-form button[type=submit]').click();
-  await expect(page.locator('#auth-guest')).toBeVisible(); await expect(page.locator('#account-status')).toContainText('deleted');
-  await page.reload(); await page.locator('#tab-adventurer').click(); await expect(page.locator('#auth-guest')).toBeVisible();
+  await accountStation(page);
+  await page.locator('#delete-toggle').click();
+  await page.locator('#delete-password').fill('wrong-password');
+  await page.locator('#delete-form button[type=submit]').click();
+  await expect(page.locator('#account-status')).toContainText('Incorrect');
+  await page.locator('#delete-password').fill(password);
+  await page.locator('#delete-form button[type=submit]').click();
+  await expect(page.locator('#auth-guest')).toBeVisible();
+  await expect(page.locator('#account-status')).toContainText('deleted');
+  await page.reload();
+  await accountStation(page);
+  await expect(page.locator('#auth-guest')).toBeVisible();
 });
 
-test('logout in another tab ends active gameplay and clears its controls', async ({ page, context }) => {
+test('logout in another tab ends active gameplay and clears its controls', async ({
+  page,
+  context,
+}) => {
   const username = `Session${Math.random().toString(36).slice(2, 9)}`;
   const password = 'browser-test-password';
-  await page.goto('/'); await page.locator('#tab-adventurer').click(); await page.locator('#tab-register').click();
-  await page.locator('#username').fill(username); await page.locator('#password').fill(password);
-  await page.locator('#auth-submit').click(); await expect(page.locator('#account-profile')).toBeVisible(); await page.locator('#tab-adventure').click(); await expect(page.locator('#supplies-status')).toBeEmpty();
-  await page.locator('#create').click(); await expect(page.locator('#loading')).toBeHidden();
+  await page.goto('/');
+  await accountStation(page);
+  await page.locator('#tab-register').click();
+  await page.locator('#username').fill(username);
+  await page.locator('#password').fill(password);
+  await page.locator('#auth-submit').click();
+  await expect(page.locator('#village-game canvas')).toBeVisible();
+  await services(page);
+  await expect(page.locator('#supplies-status')).toBeEmpty();
+  await portal(page);
+  await page.locator('#create').click();
+  await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#game canvas')).toBeVisible();
-  const other = await context.newPage(); await other.goto('/'); await other.locator('#tab-adventurer').click(); await other.locator('#logout').click();
-  await page.locator('#tab-adventurer').click(); await expect(page.locator('#auth-guest')).toBeVisible(); await expect(page.locator('#game canvas')).toHaveCount(0);
+  const other = await context.newPage();
+  await other.goto('/');
+  await accountStation(other);
+  await other.locator('#logout').click();
+  await expect(page.locator('#auth-guest')).toBeVisible();
+  await expect(page.locator('#game canvas')).toHaveCount(0);
   await expect(page.locator('#status')).toContainText(/session/i);
-  await other.locator('#username').fill(username); await other.locator('#password').fill(password); await other.locator('#auth-submit').click();
-  await expect(other.locator('#account-profile')).toBeVisible();
-  await other.request.delete('/api/auth/account', { headers: { Origin: 'http://localhost:5173' }, data: { password } });
+  await other.locator('#username').fill(username);
+  await other.locator('#password').fill(password);
+  await other.locator('#auth-submit').click();
+  await expect(other.locator('#village-game canvas')).toBeVisible();
+  await other.request.delete('/api/auth/account', {
+    headers: { Origin: 'http://localhost:5173' },
+    data: { password },
+  });
 });

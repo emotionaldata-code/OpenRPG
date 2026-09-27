@@ -1,0 +1,441 @@
+/* Account identity and expedition preparation are independent panels. */
+.lobby-grid {
+  align-items: start;
+  gap: 48px;
+}
+.identity-column {
+  min-width: 0;
+}
+.hero h1 {
+  font-size: 72px;
+  margin-top: 18px;
+}
+.hero .landscape {
+  height: 190px;
+}
+.hero .intro {
+  margin-bottom: 20px;
+}
+.hero-footer {
+  padding-top: 14px;
+}
+.account-card {
+  margin-top: 28px;
+  padding: 23px 25px 10px;
+  border: 1px solid #526046;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #263b2d, #192d24);
+  box-shadow: 0 12px 36px #0c1f1830;
+  position: relative;
+  overflow: hidden;
+}
+.account-card:before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25px;
+  width: 45px;
+  height: 2px;
+  background: #d3bc84;
+}
+.account-card h2 {
+  font-size: 30px;
+  margin: 15px 0 4px;
+}
+.account-badge {
+  font-size: 8px;
+  letter-spacing: 1.2px;
+  color: #bbcca7;
+  border: 1px solid #58674b;
+  border-radius: 20px;
+  padding: 6px 9px;
+}
+.account-note {
+  color: #aebb9f;
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 8px 0;
+}
+.auth-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 17px 0 14px;
+  padding: 4px;
+  background: #14281f;
+  border: 1px solid #3d523d;
+  border-radius: 6px;
+}
+.auth-tabs button {
+  flex: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 9px;
+  font-size: 12px;
+}
+.auth-tabs [aria-pressed='true'] {
+  background: #354b35;
+  border-color: #657454;
+  color: #ead69c;
+  box-shadow: 0 2px 6px #101e1640;
+}
+.auth-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+.auth-fields input {
+  font-size: 12px;
+  padding: 13px 10px;
+}
+.auth-fields .field-label {
+  font-size: 8px;
+  letter-spacing: 1px;
+}
+.account-card .primary {
+  margin-top: 15px;
+  justify-content: center;
+  border-radius: 5px;
+  box-shadow: 0 3px 0 #857c50;
+}
+.fine-print {
+  font-size: 10px;
+  margin-top: 15px;
+}
+.account-heading {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin: 23px 0;
+}
+.passport-seal {
+  display: grid;
+  place-items: center;
+  width: 65px;
+  height: 70px;
+  flex-shrink: 0;
+  font:
+    36px Georgia,
+    serif;
+  color: #e5c986;
+  background: linear-gradient(145deg, #495839, #233d2c);
+  border: 1px solid #c0ab71;
+  border-radius: 15px 15px 28px 28px;
+  box-shadow:
+    inset 0 0 0 5px #263c2c,
+    inset 0 0 0 6px #64724a;
+}
+.account-identity {
+  min-width: 0;
+}
+.account-identity h3 {
+  font:
+    30px Georgia,
+    serif;
+  color: #e6d9b3;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+.account-identity .eyebrow {
+  font-size: 8px;
+  letter-spacing: 1.3px;
+}
+.account-identity p {
+  font-size: 11px;
+  color: #a5b49b;
+  margin: 0;
+}
+.account-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 19px;
+}
+.session-label {
+  font-size: 10px;
+  color: #b1c49d;
+}
+.session-label span {
+  color: #aac78a;
+  margin-right: 6px;
+  font-size: 8px;
+}
+.outline-button {
+  border-color: #8c9265;
+  border-radius: 5px;
+  font-size: 11px;
+  padding: 10px 14px;
+  background: #233c2b;
+}
+.outline-button span {
+  margin-left: 14px;
+  color: #d3bc84;
+}
+#account-settings {
+  border-top: 1px solid #43583f;
+  padding-top: 13px;
+}
+#account-settings summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  font-size: 11px;
+  color: #b7c1a4;
+  list-style: none;
+  padding: 3px 0;
+}
+#account-settings summary::-webkit-details-marker {
+  display: none;
+}
+#account-settings summary span {
+  color: #d3bc84;
+}
+#account-settings[open] summary span {
+  transform: rotate(45deg);
+}
+summary:focus-visible {
+  outline: 2px solid #d3b879;
+  outline-offset: 4px;
+}
+.subtle-danger {
+  font-size: 11px;
+  padding: 8px 11px;
+  margin: 4px 0;
+  background: #382f26;
+}
+.danger {
+  border-color: #986b55;
+  color: #efbb9e;
+}
+.danger:hover {
+  background: #50372b;
+  border-color: #c08a6d;
+}
+#account-status {
+  font-size: 11px;
+  color: #d3bc84;
+  line-height: 1.5;
+  min-height: 0;
+  margin: 10px 0;
+}
+#account-status:empty {
+  margin: 0;
+  height: 10px;
+}
+#delete-form {
+  margin-top: 12px;
+  padding: 14px;
+  border: 1px solid #805c4b;
+  border-radius: 5px;
+  background: #302c24;
+}
+#delete-form p {
+  font-size: 12px;
+  line-height: 1.6;
+}
+#delete-form .field-label {
+  margin: 16px 0 8px;
+}
+.delete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+.delete-actions button {
+  font-size: 11px;
+  padding: 10px;
+}
+.entry {
+  border-radius: 9px;
+  padding: 28px;
+  box-shadow: 0 15px 50px #0b1c1840;
+}
+.entry > .muted {
+  line-height: 1.6;
+  margin-bottom: 24px;
+}
+.step-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 24px 0 14px;
+}
+.step-label > span {
+  font-size: 10px;
+  color: #d8c18c;
+  border: 1px solid #68744e;
+  border-radius: 50%;
+  width: 25px;
+  height: 25px;
+  display: grid;
+  place-items: center;
+}
+.step-label h3 {
+  font-size: 13px;
+  margin: 0;
+  color: #e1ddbe;
+}
+.step-label small {
+  font-size: 7px;
+  letter-spacing: 1px;
+  color: #a4b294;
+  margin-left: auto;
+}
+.class-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.class-options button {
+  position: relative;
+  padding: 23px 4px 16px;
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  background: linear-gradient(#22392c, #192e24);
+  border-radius: 7px;
+  transition:
+    background 0.2s,
+    border-color 0.2s,
+    transform 0.2s;
+}
+.class-options button:hover {
+  transform: translateY(-3px);
+  border-color: #98a375;
+}
+.class-options [aria-pressed='true'] {
+  border-color: #d3bc84;
+  background: radial-gradient(ellipse at 50% 30%, #546242, #2b432f 80%);
+  box-shadow:
+    inset 0 0 0 1px #d3bc8420,
+    0 4px 15px #101f1750;
+}
+.class-check {
+  position: absolute;
+  right: 8px;
+  top: 6px;
+  font-size: 11px;
+  color: #e4cd91;
+  visibility: hidden;
+}
+.class-options [aria-pressed='true'] .class-check {
+  visibility: visible;
+}
+.class-options canvas {
+  width: 60px;
+  height: 70px;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 5px 2px #0b211766);
+}
+.class-options strong {
+  font-family: Georgia, serif;
+  font-weight: 400;
+  font-size: 17px;
+  color: #e5d8af;
+}
+.class-options small {
+  font-size: 8px;
+  color: #b1bea2;
+}
+.class-note {
+  font-size: 10px;
+  margin-top: 13px;
+}
+.entry .primary {
+  border-radius: 5px;
+  box-shadow: 0 3px 0 #857c50;
+}
+.expedition-locked {
+  text-align: center;
+  border: 1px dashed #5b6b4b;
+  border-radius: 7px;
+  padding: 40px 24px;
+  margin: 30px 0 13px;
+  background: radial-gradient(ellipse at 50% 20%, #314a34, #1b3026);
+}
+.locked-sigil {
+  display: block;
+  font-size: 48px;
+  color: #d4bd83;
+  margin-bottom: 14px;
+}
+.expedition-locked h3 {
+  font:
+    25px Georgia,
+    serif;
+  color: #dfd1a7;
+}
+.expedition-locked p {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #aabb9e;
+  margin: 14px auto 24px;
+  max-width: 265px;
+}
+@media (max-width: 1050px) {
+  .lobby-grid {
+    gap: 25px;
+  }
+  .entry {
+    padding: 22px;
+  }
+  .account-card {
+    padding: 20px 18px 10px;
+  }
+  .auth-fields {
+    grid-template-columns: 1fr;
+  }
+  .hero h1 {
+    font-size: 64px;
+  }
+  .account-actions {
+    flex-wrap: wrap;
+  }
+  .class-options small {
+    font-size: 7px;
+  }
+}
+@media (max-width: 760px) {
+  .lobby-grid {
+    gap: 23px;
+  }
+  .account-card {
+    margin-top: 0;
+  }
+  .auth-fields {
+    grid-template-columns: 1fr 1fr;
+  }
+  .entry {
+    padding: 23px;
+  }
+  .class-options small {
+    font-size: 9px;
+  }
+}
+@media (max-width: 420px) {
+  .auth-fields {
+    grid-template-columns: 1fr;
+  }
+  .account-identity h3 {
+    font-size: 25px;
+  }
+  .step-label small {
+    font-size: 6px;
+  }
+  .class-options {
+    gap: 6px;
+  }
+  .class-options small {
+    font-size: 7px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .class-options button {
+    transition: none;
+  }
+  .class-options button:hover {
+    transform: none;
+  }
+}

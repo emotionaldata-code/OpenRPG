@@ -1,0 +1,194 @@
+/* Full-screen world outside dialogs; existing feature controls live inside them. */
+#lobby {
+  min-height: 100dvh;
+  max-width: none;
+  padding: 0;
+}
+#lobby > .masthead {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  height: 72px;
+  padding: 0 28px;
+  border: 0;
+  background: linear-gradient(#14261fee, #14261f00);
+}
+#lobby > .masthead .edition,
+#lobby > .masthead .badge {
+  display: none;
+}
+#lobby > .masthead .brand {
+  font-size: 16px;
+  margin-left: auto;
+}
+#auth-screen {
+  min-height: 100dvh;
+  display: grid;
+  place-content: center;
+  padding: 90px 24px 32px;
+  gap: 25px;
+  background: radial-gradient(ellipse at 50% 40%, #3c5039, #10281f 72%);
+}
+.welcome-title {
+  text-align: center;
+}
+.welcome-title h1 {
+  font:
+    48px Georgia,
+    serif;
+  color: #e5d5ad;
+  margin: 14px 0;
+}
+.welcome-title p {
+  color: #afbd9c;
+  font-size: 14px;
+}
+#auth-screen .account-card {
+  width: min(460px, calc(100vw - 48px));
+  background: #172b23e8;
+  box-shadow: 0 20px 80px #0005;
+}
+#village {
+  position: fixed;
+  inset: 0;
+  background: #243c2e;
+}
+#village-game {
+  width: 100%;
+  height: 100%;
+}
+.village-heading {
+  position: absolute;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  pointer-events: none;
+  white-space: nowrap;
+  text-shadow: 0 2px 6px #102019;
+}
+.village-heading h1 {
+  font:
+    34px Georgia,
+    serif;
+  color: #e9dbb5;
+  margin: 8px 0;
+}
+.village-heading p {
+  font-size: 11px;
+  color: #c0caae;
+}
+.village-guide {
+  position: absolute;
+  right: 22px;
+  top: 84px;
+  display: grid;
+  gap: 7px;
+  color: #d0c7a9;
+  font: 10px monospace;
+  text-shadow: 0 2px 3px #102019;
+  pointer-events: none;
+}
+.village-footer {
+  position: absolute;
+  bottom: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  width: min(90vw, 600px);
+}
+#village-prompt {
+  display: inline-block;
+  background: #16291feb;
+  border: 1px solid #aa986166;
+  padding: 12px 25px;
+  border-radius: 30px;
+  box-shadow: 0 6px 28px #0005;
+  font-size: 14px;
+}
+#village-status {
+  color: #ead5a4;
+  text-shadow: 0 2px 5px #000;
+  font-size: 12px;
+  margin: 0;
+}
+#village-dialog {
+  width: min(1040px, calc(100vw - 40px));
+  max-height: calc(100dvh - 70px);
+  padding: 26px 32px;
+  color: #dedfc9;
+  background: linear-gradient(135deg, #26372a, #172921);
+  border: 1px solid #a18c58;
+  border-radius: 8px;
+  box-shadow:
+    0 30px 120px #0009,
+    inset 0 0 0 5px #c2aa6910;
+}
+#village-dialog::backdrop {
+  background: #06181199;
+  backdrop-filter: blur(3px);
+}
+.village-dialog-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+  border-bottom: 1px solid #8b825244;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+}
+.village-dialog-heading h2 {
+  font:
+    30px Georgia,
+    serif;
+  margin: 8px 0 0;
+  color: #e4d3a2;
+}
+#village-dialog .account-card {
+  border: 0;
+  padding: 0;
+  background: none;
+}
+#village-dialog .portal-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+#village-dialog .landscape {
+  margin-top: 20px;
+}
+#village-dialog .class-options {
+  margin: 20px 0;
+}
+#village-dialog .hero-footer {
+  margin-top: 15px;
+}
+#village-dialog #shop-panel {
+  padding-top: 20px;
+}
+#village-dialog-status:empty,
+#village-status:empty {
+  display: none;
+}
+@media (max-width: 750px) {
+  .village-guide {
+    display: none;
+  }
+  .village-heading h1 {
+    font-size: 26px;
+  }
+  #village-dialog .portal-columns {
+    grid-template-columns: 1fr;
+  }
+  #village-dialog {
+    padding: 20px;
+  }
+  .village-dialog-heading {
+    align-items: start;
+  }
+  #village-close {
+    font-size: 11px;
+  }
+}

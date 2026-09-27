@@ -1,0 +1,105 @@
+<header class="studio-header">
+  <div>
+    <span class="eyebrow">YOUR WARDROBE</span>
+    <h2 id="skin-title">Skin workshop</h2>
+    <p class="studio-subtitle">Make a look of your own. Wear it on your next expedition.</p>
+  </div>
+  <button id="skin-close" aria-label="Close skin editor">Close ✕</button>
+</header>
+<div class="studio-library">
+  <div class="library-heading">
+    <label for="skin-library">SAVED SKINS</label>
+    <span id="skin-count"></span>
+  </div>
+  <div class="library-controls">
+    <select id="skin-library">
+      <option value="">No saved skins yet</option>
+    </select>
+    <button id="skin-copy" disabled>Edit a copy</button>
+    <button id="skin-delete" class="danger" disabled>Delete</button>
+  </div>
+  <p id="skin-library-hint" class="studio-hint">Create your first skin below.</p>
+</div>
+<div class="studio-layout">
+  <aside class="studio-tools">
+    <label for="skin-class">START FROM A CLASS</label>
+    <select id="skin-class">
+      <option value="archer">Archer</option>
+      <option value="mage">Mage</option>
+      <option value="warrior">Warrior</option>
+    </select>
+    <button id="skin-reset">New from template</button>
+    <label for="skin-name">SKIN NAME</label>
+    <input id="skin-name" maxlength="32" placeholder="Name your creation" />
+    <span class="tool-label">TOOLS</span>
+    <div class="pixel-tools" role="group" aria-label="Pixel tools">
+      <button data-tool="pencil" aria-pressed="true">✎ Pencil</button>
+      <button data-tool="eraser" aria-pressed="false">◇ Eraser</button>
+      <button data-tool="fill" aria-pressed="false">▧ Fill</button>
+      <button data-tool="picker" aria-pressed="false">⌖ Pick</button>
+    </div>
+    <span class="tool-label">PALETTE</span>
+    <div id="skin-palette" role="group" aria-label="Skin colors"></div>
+    <label for="skin-color">CHOSEN COLOR</label>
+    <div class="color-row">
+      <input id="skin-color" type="color" value="#c6aa66" />
+      <button id="skin-add-color">Add color</button>
+    </div>
+    <button id="skin-recolor">Replace color</button>
+    <p class="studio-hint">Replace the selected swatch across every frame.</p>
+  </aside>
+  <section class="studio-drawing" aria-label="Pixel drawing board">
+    <div class="frame-controls">
+      <label for="skin-direction">VIEW</label>
+      <select id="skin-direction">
+        <option value="0">Right</option>
+        <option value="1" selected>Front</option>
+        <option value="2">Left</option>
+        <option value="3">Back</option>
+      </select>
+      <label for="skin-frame">FRAME</label>
+      <select id="skin-frame">
+        <option value="0">1 · Idle</option>
+        <option value="1">2 · Walk</option>
+        <option value="2">3 · Walk</option>
+      </select>
+    </div>
+    <div class="pixel-scroll">
+      <canvas
+        id="skin-board"
+        width="288"
+        height="336"
+        aria-label="Skin pixel drawing canvas"
+      ></canvas>
+    </div>
+    <div class="drawing-actions">
+      <button id="skin-undo">↶ Undo</button>
+      <button id="skin-redo">↷ Redo</button>
+      <label for="skin-zoom">Zoom</label>
+      <select id="skin-zoom">
+        <option value="8">8×</option>
+        <option value="12" selected>12×</option>
+        <option value="16">16×</option>
+      </select>
+    </div>
+    <p class="studio-hint">Painting changes this frame only.</p>
+  </section>
+  <aside class="studio-preview">
+    <span class="eyebrow">PREVIEW · <span id="skin-current-class"></span> </span>
+    <div id="skin-live"></div>
+    <label class="preview-toggle">
+      <input id="skin-walking" type="checkbox" checked /> Show walking</label
+    >
+    <p class="studio-hint">A new appearance. Same abilities.</p>
+    <div class="studio-save">
+      <button id="skin-save" class="primary">
+        Save new skin <span aria-hidden="true">↗</span>
+      </button>
+      <p class="studio-hint">Saves a separate design in your wardrobe.</p>
+    </div>
+  </aside>
+</div>
+<footer class="studio-footer">
+  <span id="skin-draft-state">Draft</span>
+  <p id="skin-status" role="status" aria-live="polite"></p>
+</footer>
