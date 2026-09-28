@@ -19,6 +19,22 @@ const tone = (
 const chime = (notes: number[]): Tone[] =>
   notes.map((hz, i) => tone('sine', hz, hz, 0.24, 0.12, i * 0.085));
 export const SOUNDS = {
+  'desert-mob': [tone('noise', 3200, 700, 0.28, 0.13), tone('triangle', 220, 110, 0.16, 0.1)],
+  'desert-boss': [tone('sawtooth', 95, 38, 0.65, 0.15), tone('noise', 1600, 130, 0.8, 0.2)],
+  'forest-mob': [tone('noise', 600, 180, 0.23, 0.15), tone('triangle', 310, 180, 0.2, 0.12)],
+  'forest-boss': [tone('triangle', 180, 420, 0.6, 0.15), tone('sine', 270, 120, 0.8, 0.13)],
+  'castle-mob': [tone('square', 440, 180, 0.14, 0.08), tone('noise', 2000, 700, 0.2, 0.12)],
+  'castle-boss': [tone('sawtooth', 110, 55, 0.55, 0.12), ...chime([220, 233, 330])],
+  'mountain-mob': [tone('sine', 1100, 320, 0.3, 0.12), tone('noise', 2000, 500, 0.2, 0.1)],
+  'mountain-boss': [tone('sawtooth', 70, 30, 0.8, 0.17), tone('noise', 500, 90, 0.65, 0.2)],
+  'paradise-mob': chime([880, 1175]),
+  'paradise-boss': [...chime([1047, 988, 740]), tone('sine', 130, 65, 0.8, 0.18)],
+  'hell-mob': [tone('noise', 700, 2200, 0.35, 0.17), tone('square', 140, 70, 0.18, 0.08)],
+  'hell-boss': [
+    tone('sawtooth', 65, 32, 0.9, 0.18),
+    tone('noise', 3400, 180, 0.75, 0.2),
+    tone('triangle', 98, 49, 0.6, 0.12, 0.2),
+  ],
   click: [tone('triangle', 620, 420, 0.055, 0.1)],
   important: chime([294, 440, 587]),
   'archer-shot': [

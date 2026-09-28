@@ -56,13 +56,21 @@ export class CombatView {
       }
       const winding = mob.attackAt > 0,
         flash = now - mob.lastAttackAt;
-      if (!winding && (flash < 0 || flash > 250)) {
+      // A stun cancels every queued wave, including after the stun itself ends.
+      if (!winding && mob.stunnedUntil > mob.lastAttackAt) {
+        continue;
+      }
+      if (
+        !winding &&
+        (flash < 0 ||
+          flash > (attackPattern(mob.attackKind, mob.role, this.net.map.id).durationMs ?? 0) + 250)
+      ) {
         continue;
       }
       // Use the server's locked origin/target so warning geometry matches actual damage.
       const x = mob.attackX,
         y = mob.attackY;
-      const rules = enemyRules(mob.role, this.net.map.id),
+      const rules = enemyRules(mob.role, this.net.map.id, mob.species),
         pattern = attackPattern(mob.attackKind, mob.role, this.net.map.id);
       const progress = winding
         ? Math.max(
@@ -85,8 +93,14 @@ export class CombatView {
       );
       if (areas.length) {
         for (const area of areas) {
+          const age = winding ? -1 : flash - (area.delayMs ?? 0);
+          if (age > 250) {
+            continue;
+          }
+          const waveAlpha = age < 0 ? 0.12 : Math.max(0, 1 - age / 250) * 0.65;
+          g.fillStyle(color, waveAlpha).lineStyle(2, color, age < 0 ? 0.5 : 0.95);
           if (area.innerRadius > 0) {
-            g.lineStyle(area.radius - area.innerRadius, color, alpha).strokeCircle(
+            g.lineStyle(area.radius - area.innerRadius, color, waveAlpha).strokeCircle(
               area.x,
               area.y,
               (area.radius + area.innerRadius) / 2,

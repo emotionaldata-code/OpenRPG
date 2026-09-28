@@ -6,7 +6,7 @@ import {
   PROJECTILES,
   CHARGE,
   RULES,
-  ENEMY_RULES,
+  enemyRules,
   WORLD,
   OBSTACLES,
   SPAWNS,
@@ -101,7 +101,7 @@ test('malformed input becomes finite bounded intent; invalid room options reject
   assert.throws(() => parseRoomOptions({ name: 'Okay', visibility: 'hidden' }));
   assert.deepEqual(parseRoomOptions({ name: '  Archer  ', visibility: 'invite' }), {
     visibility: 'invite',
-    mapId: 'forest',
+    mapId: 'desert',
     mode: 'testing',
   });
 });
@@ -134,7 +134,8 @@ test('arrows damage mobs, never teammates, with terrain taking the first hit', (
   ticks(sim, 8);
   assert.equal(
     mob.hp,
-    ENEMY_RULES.ranged.health - Math.round(PROJECTILES.arrow.damage * CHARGE.minDamage),
+    enemyRules(mob.role, 'forest', mob.species).health -
+      Math.round(PROJECTILES.arrow.damage * CHARGE.minDamage),
   );
   assert.equal(ally.hp, 100);
   Object.assign(p, { x: 430, y: 480 });
@@ -145,12 +146,19 @@ test('arrows damage mobs, never teammates, with terrain taking the first hit', (
   ticks(sim, 12);
   assert.equal(
     mob.hp,
-    ENEMY_RULES.ranged.health - Math.round(PROJECTILES.arrow.damage * CHARGE.minDamage),
+    enemyRules(mob.role, 'forest', mob.species).health -
+      Math.round(PROJECTILES.arrow.damage * CHARGE.minDamage),
   );
 });
 test('mages require line of sight and obey cooldowns', () => {
   const { sim, state, p } = fixture();
   const m = state.mobs.get('ranged-0')!;
+  m.species = '';
+  for (const [id] of state.mobs) {
+    if (id !== 'ranged-0') {
+      state.mobs.delete(id);
+    }
+  }
   Object.assign(p, { x: 440, y: 510, protectedUntil: 0 });
   Object.assign(m, { x: 530, y: 510 });
   ticks(sim, 30);
@@ -184,6 +192,6 @@ test('players respawn at 3 seconds protected; mobs at 8 seconds', () => {
   ticks(sim, 149);
   assert.equal(mob.hp, 0);
   ticks(sim, 1);
-  assert.equal(mob.hp, 75);
+  assert.equal(mob.hp, enemyRules(mob.role, 'forest', mob.species).health);
   assert.equal(mob.generation, 1);
 });

@@ -1,5 +1,15 @@
 # Verification record
 
+## Six-biome campaign — 2026-09-28
+
+- Added 30 stages in Desert → Forest → Castle → Mountain → Paradise → Hell order. Each biome has 6/10/14/18 ordinary enemies across four maps, introducing one creature per map, then a separate boss arena. All 30 collision layouts are distinct and every encounter is reachable with its actor footprint.
+- Added 24 species, six boss signatures with scheduled waves and shared warning/damage geometry, biome travel/boss scores and effects, creature art, atmosphere and terrain details. Waves cancel on stun, death and respawn; canceled warnings also disappear.
+- Added the 30-stage progression migration, preserving previously earned biome access. Sequential unlocks, final completion and migration compatibility pass persistence tests.
+- `npm run check` passed lint, formatting, typechecks, **254 unit/integration tests** and production builds. The existing Phaser bundle-size warning remains.
+- **Four Chromium scenarios passed across focused runs:** all 30 previews/create/render/move/leave cycles; Story unlock/equipment/supply persistence and mobile layout; potion use and permanent Story death; and walking to the Forest Deer, damaging it, confirming biome boss music and leaving cleanly. The death fixture now allows 35 seconds for the gentler opening biome; its rerun passed. Screenshots were inspected for selection, Desert terrain and the deer arena.
+- Browser verification used isolated local ports because the existing development servers were suspended. Hot reload was disabled during the final checks; earlier rebuilds had interrupted active pages. Temporary servers and configuration files were removed afterward.
+
+
 ## Unrestricted boss encounters and Story enemy lives — 2026-09-28
 
 - Removed the boss seal and its synchronized flag, damage gate and client visuals. Bosses can fight while guards remain alive; music still follows the first confirmed hit.

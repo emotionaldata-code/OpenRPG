@@ -1,6 +1,8 @@
+import { BIOME_IDS, type BiomeId } from '@openrpg/shared';
 import type { Tone } from './sounds.js';
 
-export type Music = 'menu' | 'adventure' | 'boss';
+type BaseMusic = 'menu' | 'adventure' | 'boss';
+export type Music = BaseMusic | `${BiomeId}-${'adventure' | 'boss'}`;
 interface Bar {
   chord: readonly [number, number, number];
   melody: readonly number[];
@@ -18,7 +20,7 @@ const Dm = [50, 53, 57] as const,
   Bb = [46, 50, 53] as const;
 const F = [53, 57, 60] as const,
   A = [45, 49, 52] as const;
-export const MUSIC: Record<Music, Score> = {
+const BASE_MUSIC: Record<BaseMusic, Score> = {
   // Gentle 6/8, G major: a flute melody over rolling, lute-like plucks.
   menu: {
     step: 0.36,
@@ -79,6 +81,69 @@ export const MUSIC: Record<Music, Score> = {
   },
 };
 
+// Separate melodies and harmony for each biome; boss calls answer their travel motif.
+const motifs: Record<
+  BiomeId,
+  { root: number; step: number; travel: readonly number[]; battle: readonly number[] }
+> = {
+  desert: {
+    root: 50,
+    step: 0.29,
+    travel: [0, 1, 5, 4, 7, 8, 7, 4],
+    battle: [0, 7, 1, 8, 5, 4, 1, 0],
+  },
+  forest: {
+    root: 55,
+    step: 0.32,
+    travel: [0, 3, 7, 10, 7, 5, 3, 0],
+    battle: [0, 7, 10, 12, 10, 7, 3, 5],
+  },
+  castle: {
+    root: 45,
+    step: 0.26,
+    travel: [0, 0, 7, 3, 2, 0, -1, 0],
+    battle: [0, 3, 7, 0, 8, 7, 3, -1],
+  },
+  mountain: {
+    root: 52,
+    step: 0.34,
+    travel: [0, 7, 12, 0, 10, 7, 5, 0],
+    battle: [0, 0, 7, 12, 10, 7, 0, 5],
+  },
+  paradise: {
+    root: 60,
+    step: 0.31,
+    travel: [0, 4, 7, 11, 12, 7, 4, 2],
+    battle: [12, 11, 7, 6, 3, 6, 7, 0],
+  },
+  hell: {
+    root: 43,
+    step: 0.23,
+    travel: [0, 1, 6, 0, 3, 1, -1, 0],
+    battle: [0, 6, 1, 7, 3, 6, 1, -1],
+  },
+};
+function biomeScore(biome: BiomeId, boss: boolean): Score {
+  const m = motifs[biome],
+    motif = boss ? m.battle : m.travel;
+  return {
+    step: m.step * (boss ? 0.7 : 1),
+    bars: [0, -2, 3, -1].map((shift) => ({
+      chord: [m.root + shift, m.root + shift + 3, m.root + shift + 7],
+      melody: motif.map((n, i) => (!boss && i % 3 === 1 ? 0 : m.root + 12 + n + shift)),
+    })),
+  };
+}
+export const MUSIC: Record<Music, Score> = {
+  ...BASE_MUSIC,
+  ...Object.fromEntries(
+    BIOME_IDS.flatMap((biome) => [
+      [`${biome}-adventure`, biomeScore(biome, false)],
+      [`${biome}-boss`, biomeScore(biome, true)],
+    ]),
+  ),
+} as Record<Music, Score>;
+
 const hz = (midi: number): number => 440 * 2 ** ((midi - 69) / 12);
 const note = (
   wave: OscillatorType,
@@ -94,7 +159,7 @@ export function musicStep(mode: Music, step: number): Tone[] {
     beats = score.bars[0]!.melody.length;
   const bar = score.bars[Math.floor(step / beats) % score.bars.length]!,
     beat = step % beats;
-  const boss = mode === 'boss';
+  const boss = mode === 'boss' || mode.endsWith('-boss');
   const menu = mode === 'menu',
     tones: Tone[] = [],
     melody = bar.melody[beat]!;

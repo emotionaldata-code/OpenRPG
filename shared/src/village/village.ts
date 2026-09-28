@@ -47,7 +47,7 @@ export const VILLAGE_STATIONS = [
   },
   {
     id: 'story',
-    name: 'The Five Realms',
+    name: 'The Six Realms',
     hint: 'STORY · unlock your journey',
     activity: 'Preparing a story expedition',
     x: 790,

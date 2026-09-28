@@ -128,7 +128,7 @@ test('dash stuns stop normal AI, then allow a fresh warning; respawn clears the 
   const state = new WorldState({ elapsed: 1000 }),
     sim = new Simulation(state);
   sim.addPlayer('hero', 'Hero', 'warrior');
-  const mob = state.mobs.get('melee-1')!,
+  const mob = state.mobs.get('ranged-1')!,
     hero = state.players.get('hero')!;
   Object.assign(hero, { x: mob.x - 40, y: mob.y, protectedUntil: 0 });
   mob.attackAt = 1100;

@@ -60,7 +60,7 @@ export function parseRoomOptions(value: unknown): RoomOptions {
   }
   return {
     visibility: options.visibility,
-    mapId: parseMapId(options.mapId === undefined ? 'forest' : options.mapId),
+    mapId: parseMapId(options.mapId === undefined ? 'desert' : options.mapId),
     mode: parseMode(options.mode),
   };
 }

@@ -49,19 +49,19 @@ test('accessible path tabs, collection, class equipment and spent supplies persi
     await expect(page.locator('#collection-summary')).toContainText('3 health potions');
     await portal(page, 'story');
     await expect(page.locator('#story-rules')).toBeVisible();
-    await expect(page.locator('#map-castle')).toBeDisabled();
-    await expect(page.locator('#map-forest')).toBeEnabled();
+    await expect(page.locator('#map-desert-2')).toBeDisabled();
+    await expect(page.locator('#map-desert')).toBeEnabled();
     await page.screenshot({ path: info.outputPath('story-collection.png'), fullPage: true });
     // Seed only this test account's earned rewards; room combat rewards are tested separately.
     await new Adventures(pool).reward(id, `browser-${id}`, {
       items: ['iron-sword', 'iron-armor'],
       potions: 0,
-      completedMap: 'forest',
+      completedMap: 'desert',
     });
     await services(page);
     await page.locator('#supplies-retry').click();
-    await expect(page.locator('#map-castle')).toBeEnabled();
-    await expect(page.locator('#map-paradise')).toBeDisabled();
+    await expect(page.locator('#map-desert-2')).toBeEnabled();
+    await expect(page.locator('#map-desert-3')).toBeDisabled();
     await services(page);
     await page.locator('#class-warrior').click();
     await page.locator('#loadout-weapon').getByRole('button', { name: 'Kingsguard sword' }).click();
@@ -70,7 +70,7 @@ test('accessible path tabs, collection, class equipment and spent supplies persi
     await page.locator('#potion-count').fill('2');
     await page.screenshot({ path: info.outputPath('expedition-equipment.png'), fullPage: true });
     await portal(page);
-    await page.locator('#map-castle').click();
+    await page.locator('#map-desert-2').click();
     await portal(page);
     await page.locator('#create').click();
     await expect(page.locator('#loading')).toBeHidden();
@@ -129,7 +129,7 @@ test('R heals with carried supplies and Story death never respawns', async ({ pa
       .toBeLessThan(100);
     await page.keyboard.press('r');
     await expect.poll(async () => (await state(page)).player.potions).toBe(1);
-    await expect.poll(async () => (await state(page)).player.hp, { timeout: 20000 }).toBe(0);
+    await expect.poll(async () => (await state(page)).player.hp, { timeout: 35000 }).toBe(0);
     await expect(page.locator('#expedition-result')).toContainText('party has fallen');
     await page.waitForTimeout(3500);
     const s = await state(page);

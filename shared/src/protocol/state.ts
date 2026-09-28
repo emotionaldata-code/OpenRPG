@@ -44,6 +44,7 @@ export type Player = SchemaType<typeof Player>;
 export const Mob = schema(
   {
     role: t.string().default('ranged'),
+    species: t.string().default(''),
     attackAt: t.number().default(0),
     attackStartedAt: t.number().default(0),
     attackX: t.float64().default(0),

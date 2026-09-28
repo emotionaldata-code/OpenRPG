@@ -46,27 +46,22 @@ Players cannot be stunned again until 1.5 seconds after their stun expires, agai
 
 ## Maps and AI
 
-`shared/src/world/map.ts` combines themes with authored `routes/`, registered in `regions.ts`. Geometry is bundled in client/server, not streamed each patch. `mapId` and mode are immutable room state; joining inherits the room's choice.
+`biomes.ts` defines the campaign order: Desert → Forest → Castle → Mountain → Paradise → Hell. Each biome has four combat stages (6, 10, 14 and 18 enemies), then one boss-only arena. `map.ts` combines palettes with authored routes. Original first-stage routes remain in their biome modules; `routes/campaign.ts` owns the additional itineraries and arenas. Geometry is bundled in client/server, not streamed each patch. The room's map and mode are immutable.
 
-`enemies.ts` contains role stats/themes; `enemy-attacks.ts` contains difficulty, rotations and warning geometry. AI patrols, pursues, flanks, strafes and returns home when leashed. Clear sight skips path search; obstructed paths refresh at most every 450 ms per mob, with walkability cached by footprint.
+`species.ts` defines four creatures per biome, introduced cumulatively across the combat stages. Species control appearance, attack rotation, movement speed, health and detection range; the synchronized `species` ID selects the same definition on client/server. `enemies.ts` applies biome/stage difficulty, while `enemy-attacks.ts` defines attack timings and rotations. Patrols, pursuit, flanking, strafing and leashes share the existing AI. Obstructed paths refresh at most every 450 ms per mob.
 
-Ordinary rotations add Castle fans, Paradise/Hell melee slams and Mountain ranged rings. Attack pauses scale by realm (Forest 0.90, Castle 0.82, Paradise 0.74, Hell 0.66, Mountain 0.58) on top of existing tier cooldowns; warning durations remain unchanged.
-
-Each boss has one exclusive move in its rotation:
-
-| Boss | Special | Dodge response |
+| Boss | Signature | Dodge response |
 | --- | --- | --- |
-| Elderroot | Root grasp: three circles from the boss to the locked target | Sidestep the root line |
-| Hollow King | Royal cleave: a broad 205-unit forward sector | Get behind the King or outside its reach |
-| Seraph of Noon | Solar halo: a 100–210-unit annulus | Stay inside the safe center or move beyond the ring |
-| Infernal Warden | Hell fissure: five circles in a cross at the locked target | Move diagonally out of the cross |
-| Glacier Colossus | Avalanche: five circles across the target’s approach direction | Dodge forward/backward out of the marked wall |
+| Sand Lion | Sirocco spiral: three expanding, rotating rings of sand marks, between fast charges | Use the center and gaps, then sidestep the locked rush |
+| Forest Deer | Wild Hunt: four successive rows of branching roots | Move between branches or behind the deer |
+| Demoniac King | King's checkmate: three rotating cleaves | Move into a cleared sector before the next cleave |
+| Grizzly | Mountain Breaker: three advancing avalanche walls | Dodge across a cleared row or around the wall |
+| Fallen Angel | Fall from Grace: outer halo, inner blast, then a targeted fall | Start inside, move outside, then leave the final mark |
+| Demon Gargoyle | Wings of Damnation: four spreading waves of fire | Move between the rays or behind the gargoyle |
 
-`world/boss-attacks.ts` supplies the same locked areas for warnings and damage. Overlapping marks deal one hit per attack; cover, spawn protection and Iron will still apply. These are bounded, immediate attacks after wind-up, with no lingering hazards or extra timers.
+`boss-attacks.ts` supplies locked geometry and wave delays for both warnings and damage. Overlapping marks deal one hit per wave. Cover, camp protection and Iron Will apply. Continuations advance inside the existing simulation step and cancel on stun, death, removal or respawn; there are no independent timers. Enrage shortens pauses, never an already displayed warning. Hostile projectiles remain capped at 192 per room.
 
-Warnings lock origin, target and aim during wind-up. Enrage increases movement and shortens pauses without shortening an already displayed warning. Attack continuations cancel on owner death/removal/generation changes. Enemy projectiles are capped at 192 per room; attacks add no asynchronous AI jobs or per-shot timers.
-
-Bosses fight while guards are alive. Confirmed damage sets `engaged` for music; respawn or leash reset clears it.
+Bosses occupy their own arenas. Confirmed damage sets `engaged` for the biome's boss music; death, retreat, respawn or leash reset returns to its travel score. Story requires every creature on each combat map, then its biome boss on the fifth stage. Testing retains unlimited respawns.
 
 ## Mode rules
 

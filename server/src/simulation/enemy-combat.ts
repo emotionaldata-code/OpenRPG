@@ -12,6 +12,7 @@ import {
   sectorHits,
   sweepRect,
   terrainHit,
+  type AttackArea,
   type Mob,
   type Player,
   type Point,
@@ -35,6 +36,14 @@ interface FollowUp {
 /** Bounded attack continuations; no timers or independent simulation loops. */
 export class EnemyCombat {
   private active: FollowUp[] = [];
+  private waves: {
+    owner: string;
+    generation: number;
+    at: number;
+    origin: Point;
+    areas: AttackArea[];
+    damage: number;
+  }[] = [];
   constructor(
     private state: WorldState,
     private map: GameMap,
@@ -52,7 +61,9 @@ export class EnemyCombat {
       return;
     }
     const pattern = attackPattern(mob.attackKind, mob.role, this.map.id);
-    const damage = Math.round(enemyRules(mob.role, this.map.id).damage * pattern.damage);
+    const damage = Math.round(
+      enemyRules(mob.role, this.map.id, mob.species).damage * pattern.damage,
+    );
     const areas = bossAttackAreas(
       mob.attackKind,
       { x: mob.attackX, y: mob.attackY },
@@ -61,19 +72,19 @@ export class EnemyCombat {
       pattern.radius,
     );
     if (areas.length) {
-      for (const player of this.state.players.values()) {
-        if (
-          player.connected &&
-          player.hp > 0 &&
-          terrainHit(mob, player, 0, this.map.obstacles) === null &&
-          areas.some(
-            (area) =>
-              attackAreaHits(area, player, RULES.playerRadius) &&
-              terrainHit(area, player, 0, this.map.obstacles) === null,
-          )
-        ) {
-          // Overlapping marks still deal one hit per attack.
-          this.damage(player, damage, id);
+      for (const delay of new Set(areas.map((area) => area.delayMs ?? 0))) {
+        const wave = {
+          owner: id,
+          generation: mob.generation,
+          at: this.state.elapsed + delay,
+          origin: { x: mob.attackX, y: mob.attackY },
+          areas: areas.filter((area) => (area.delayMs ?? 0) === delay),
+          damage,
+        };
+        if (delay === 0) {
+          this.hitAreas(wave);
+        } else {
+          this.waves.push(wave);
         }
       }
       return;
@@ -118,7 +129,44 @@ export class EnemyCombat {
       }
     }
   }
+  private hitAreas(wave: {
+    owner: string;
+    origin: Point;
+    areas: AttackArea[];
+    damage: number;
+  }): void {
+    for (const player of this.state.players.values()) {
+      if (
+        player.connected &&
+        player.hp > 0 &&
+        terrainHit(wave.origin, player, 0, this.map.obstacles) === null &&
+        wave.areas.some(
+          (area) =>
+            attackAreaHits(area, player, RULES.playerRadius) &&
+            terrainHit(area, player, 0, this.map.obstacles) === null,
+        )
+      ) {
+        this.damage(player, wave.damage, wave.owner);
+      }
+    }
+  }
   step(dt: number): void {
+    this.waves = this.waves.filter((wave) => {
+      const mob = this.state.mobs.get(wave.owner);
+      if (
+        !mob ||
+        mob.hp <= 0 ||
+        mob.generation !== wave.generation ||
+        mob.stunnedUntil > this.state.elapsed
+      ) {
+        return false;
+      }
+      if (this.state.elapsed < wave.at) {
+        return true;
+      }
+      this.hitAreas(wave);
+      return false;
+    });
     this.active = this.active.filter((attack) => {
       const mob = this.state.mobs.get(attack.owner);
       if (!mob || mob.hp <= 0 || mob.generation !== attack.generation) {
@@ -181,6 +229,7 @@ export class EnemyCombat {
   }
   stun(mob: Mob, durationMs: number): void {
     this.active = this.active.filter((attack) => this.state.mobs.get(attack.owner) !== mob);
+    this.waves = this.waves.filter((wave) => this.state.mobs.get(wave.owner) !== mob);
     mob.attackAt = 0;
     mob.stunnedUntil = Math.max(mob.stunnedUntil, this.state.elapsed + durationMs);
   }

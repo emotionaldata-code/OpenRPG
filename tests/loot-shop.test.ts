@@ -165,6 +165,7 @@ test('shop enforces storage and purse caps; reward receipts remain idempotent fo
 test('loot migration preserves existing gear and supplies', async () => {
   const id = (await user()).profile.id;
   await migrate(db.url, 'down');
+  await migrate(db.url, 'down');
   await db.pool.query(
     'INSERT INTO adventurers(account_id,potions,completed_maps) VALUES($1,17,2)',
     [id],
@@ -174,7 +175,7 @@ test('loot migration preserves existing gear and supplies', async () => {
   assert.deepEqual(await store.profile(id), {
     items: [{ id: 'ember-rod', quantity: 1 }],
     potions: 17,
-    completedMaps: 2,
+    completedMaps: 15,
     coins: 30,
   });
 });

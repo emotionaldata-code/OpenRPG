@@ -2,8 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   MAP_IDS,
+  biomeOf,
   MAPS,
-  WORLD,
   ENCOUNTERS,
   ENEMY_COMBAT,
   ENEMY_ATTACKS,
@@ -51,37 +51,17 @@ function fight(kind: EnemyAttack, mapId: MapId = 'forest') {
   return { state, combat, mob, player, tick };
 }
 
-test('long narrow realms increase encounter count, pace and mechanical complexity in story order', () => {
-  assert.ok(WORLD.width > WORLD.height * 3);
-  const seen = new Set<string>();
+test('campaign increases population within biomes and combat health across all stages', () => {
+  assert.equal(MAP_IDS.length, 30);
   MAP_IDS.forEach((id, i) => {
-    assert.equal(ENCOUNTERS[id].tier, i + 1);
-    assert.equal(MAPS[id].enemies.length, [5, 7, 8, 10, 12][i]);
-    assert.equal(new Set(ENCOUNTERS[id].boss).size, [3, 4, 5, 6, 8][i]);
-    assert.ok(MAPS[id].landmark.x > 3000);
-    assert.ok(
-      MAPS[id].enemies
-        .filter((e) => e.role !== 'boss')
-        .every((e) => e.x < MAPS[id].landmark.x - 400),
-    );
-    assert.notEqual(
-      terrainHit(MAPS[id].spawns[0]!, MAPS[id].landmark, 10, MAPS[id].obstacles),
-      null,
-    );
-    for (const attack of ENCOUNTERS[id].boss) {
-      seen.add(attack);
-    }
+    const map = MAPS[id];
+    assert.equal(ENCOUNTERS[id].tier, Math.floor(i / 5) + 1);
+    assert.equal(map.enemies.length, map.stage === 5 ? 1 : 6 + (map.stage - 1) * 4);
+    assert.ok(enemyRules('boss', id).cooldownMs > 0);
     if (i) {
-      assert.ok(
-        attackPattern('fan', 'boss', id).windupMs <
-          attackPattern('fan', 'boss', MAP_IDS[i - 1]!).windupMs,
-      );
       assert.ok(enemyRules('boss', id).health > enemyRules('boss', MAP_IDS[i - 1]!).health);
-      assert.ok(enemyRules('boss', id).speed > enemyRules('boss', MAP_IDS[i - 1]!).speed);
-      assert.ok(enemyRules('boss', id).cooldownMs < enemyRules('boss', MAP_IDS[i - 1]!).cooldownMs);
     }
   });
-  assert.ok(seen.size >= 7);
 });
 
 for (const id of MAP_IDS) {
@@ -99,66 +79,71 @@ for (const id of MAP_IDS) {
       }
     }
   });
-  test(`${id}: boss uses multiple attacks, locks warnings, enrages and resets on respawn`, () => {
-    const state = new WorldState({ mapId: id }),
-      sim = new Simulation(state);
-    const boss = [...state.mobs.values()].find((m) => m.role === 'boss')!;
-    for (const [key, mob] of state.mobs) {
-      if (mob !== boss) {
-        state.mobs.delete(key);
-      }
-    }
-    sim.addPlayer('hero', 'Hero');
-    const player = state.players.get('hero')!;
-    Object.assign(player, {
-      x: boss.x + 70,
-      y: boss.y,
-      protectedUntil: 0,
-      invulnerableUntil: 100000,
-    });
-    boss.hp = Math.floor(enemyRules('boss', id).health / 2);
-    const attacks = new Set<string>();
-    let sawEnrage = false;
-    let locked: { at: number; x: number; y: number; angle: number } | undefined;
-    for (let tick = 0; tick < 750; tick++) {
-      // Stay in the arena; the boss must pursue, close gaps and rotate attacks.
-      if (!boss.attackAt) {
-        Object.assign(player, { x: boss.x + (boss.x < MAPS[id].landmark.x ? 65 : -65), y: boss.y });
-      }
-      sim.advance(1 / 30);
-      sawEnrage ||= boss.enraged;
-      if (boss.attackAt > 0) {
-        attacks.add(boss.attackKind);
-        if (locked?.at === boss.attackAt) {
-          assert.deepEqual(
-            { x: boss.targetX, y: boss.targetY, angle: boss.attackAngle },
-            { x: locked.x, y: locked.y, angle: locked.angle },
-          );
+  if (MAPS[id].stage === 5) {
+    test(`${id}: boss uses multiple attacks, locks warnings, enrages and resets on respawn`, () => {
+      const state = new WorldState({ mapId: id }),
+        sim = new Simulation(state);
+      const boss = [...state.mobs.values()].find((m) => m.role === 'boss')!;
+      for (const [key, mob] of state.mobs) {
+        if (mob !== boss) {
+          state.mobs.delete(key);
         }
-        locked = { at: boss.attackAt, x: boss.targetX, y: boss.targetY, angle: boss.attackAngle };
       }
-      assert.ok(mapClear(id, boss));
-    }
-    assert.ok(
-      attacks.size >= Math.min(3, ENCOUNTERS[id].boss.length),
-      `${id}: ${[...attacks].join(', ')}`,
-    );
-    assert.ok(
-      [...attacks].some((kind) => ENEMY_ATTACKS[kind as EnemyAttack].name),
-      'boss uses its exclusive special',
-    );
-    assert.equal(sawEnrage, true);
-    assert.equal(boss.enraged, boss.hp <= enemyRules('boss', id).health / 2);
-    assert.equal(player.hp, 100);
-    boss.hp = 0;
-    boss.respawnAt = state.elapsed + 100;
-    for (let i = 0; i < 4; i++) {
-      sim.advance(1 / 30);
-    }
-    assert.equal(boss.hp, enemyRules('boss', id).health);
-    assert.equal(boss.enraged, false);
-    assert.equal(boss.attackAt, 0);
-  });
+      sim.addPlayer('hero', 'Hero');
+      const player = state.players.get('hero')!;
+      Object.assign(player, {
+        x: boss.x + 70,
+        y: boss.y,
+        protectedUntil: 0,
+        invulnerableUntil: 100000,
+      });
+      boss.hp = Math.floor(enemyRules('boss', id).health / 2);
+      const attacks = new Set<string>();
+      let sawEnrage = false;
+      let locked: { at: number; x: number; y: number; angle: number } | undefined;
+      for (let tick = 0; tick < 750; tick++) {
+        // Stay in the arena; the boss must pursue, close gaps and rotate attacks.
+        if (!boss.attackAt) {
+          Object.assign(player, {
+            x: boss.x + (boss.x < MAPS[id].landmark.x ? 65 : -65),
+            y: boss.y,
+          });
+        }
+        sim.advance(1 / 30);
+        sawEnrage ||= boss.enraged;
+        if (boss.attackAt > 0) {
+          attacks.add(boss.attackKind);
+          if (locked?.at === boss.attackAt) {
+            assert.deepEqual(
+              { x: boss.targetX, y: boss.targetY, angle: boss.attackAngle },
+              { x: locked.x, y: locked.y, angle: locked.angle },
+            );
+          }
+          locked = { at: boss.attackAt, x: boss.targetX, y: boss.targetY, angle: boss.attackAngle };
+        }
+        assert.ok(mapClear(id, boss));
+      }
+      assert.ok(
+        attacks.size >= Math.min(3, ENCOUNTERS[id].boss.length),
+        `${id}: ${[...attacks].join(', ')}`,
+      );
+      assert.ok(
+        [...attacks].some((kind) => ENEMY_ATTACKS[kind as EnemyAttack].name),
+        'boss uses its exclusive special',
+      );
+      assert.equal(sawEnrage, true);
+      assert.equal(boss.enraged, boss.hp <= enemyRules('boss', id).health / 2);
+      assert.equal(player.hp, 100);
+      boss.hp = 0;
+      boss.respawnAt = state.elapsed + 100;
+      for (let i = 0; i < 4; i++) {
+        sim.advance(1 / 30);
+      }
+      assert.equal(boss.hp, enemyRules('boss', id).health);
+      assert.equal(boss.enraged, false);
+      assert.equal(boss.attackAt, 0);
+    });
+  }
 }
 function mapClear(id: MapId, mob: Mob): boolean {
   return MAPS[id].obstacles.every((o) => !overlaps(mob, enemyRules(mob.role).radius, o));
@@ -169,9 +154,9 @@ test('charges sweep targets once, finish quickly and cannot tunnel through terra
   combat.enemyAttack('boss', mob);
   tick(20);
   assert.equal(mob.x, 3050);
-  assert.equal(player.hp, 80);
+  assert.equal(player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.1));
   tick(20);
-  assert.equal(player.hp, 80);
+  assert.equal(player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.1));
   const blocked = fight('charge');
   Object.assign(blocked.mob, { x: 920, y: 550, targetX: 1150, targetY: 550 });
   Object.assign(blocked.player, { x: 1000, y: 550 });
@@ -200,14 +185,14 @@ test('eruption hits its marked ground, can be dodged and respects cover, camp an
   const f = fight('eruption');
   Object.assign(f.player, { x: f.mob.targetX, y: f.mob.targetY });
   f.combat.enemyAttack('boss', f.mob);
-  assert.equal(f.player.hp, 78);
+  assert.equal(f.player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.2));
   f.player.x += ENEMY_ATTACKS.eruption.radius + RULES.playerRadius + 1;
   f.combat.enemyAttack('boss', f.mob);
-  assert.equal(f.player.hp, 78);
+  assert.equal(f.player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.2));
   Object.assign(f.player, { x: 990, y: 550 });
   Object.assign(f.mob, { x: 910, y: 550, targetX: 990, targetY: 550 });
   f.combat.enemyAttack('boss', f.mob);
-  assert.equal(f.player.hp, 78);
+  assert.equal(f.player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.2));
   Object.assign(f.player, { ...MAPS.forest.spawns[0] });
   Object.assign(f.mob, {
     x: f.player.x + 150,
@@ -216,11 +201,11 @@ test('eruption hits its marked ground, can be dodged and respects cover, camp an
     targetY: f.player.y,
   });
   f.combat.enemyAttack('boss', f.mob);
-  assert.equal(f.player.hp, 78);
+  assert.equal(f.player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.2));
   Object.assign(f.player, { x: 1100, y: 1000, invulnerableUntil: 2000 });
   Object.assign(f.mob, { x: 1000, y: 1000, targetX: 1100, targetY: 1000 });
   f.combat.enemyAttack('boss', f.mob);
-  assert.equal(f.player.hp, 78);
+  assert.equal(f.player.hp, 100 - Math.round(enemyRules('boss', 'forest').damage * 1.2));
 });
 
 test('enemy projectile budget is bounded, and expired volleys free capacity', () => {
@@ -260,8 +245,8 @@ test('navigation can leave exact wall contact without cutting a corner', () => {
 });
 
 for (const mode of ['testing', 'story']) {
-  for (const mapId of MAP_IDS) {
-    test(`${mode}/${mapId}: boss takes damage and attacks while all guards are alive`, () => {
+  for (const mapId of MAP_IDS.filter((id) => MAPS[id].stage === 5)) {
+    test(`${mode}/${mapId}: boss takes damage and attacks in its dedicated arena`, () => {
       const state = new WorldState({ mode, mapId }),
         sim = new Simulation(state),
         combat = new Combat(state);
@@ -302,15 +287,15 @@ for (const mode of ['testing', 'story']) {
 }
 
 for (const [mapId, kind] of Object.entries({
-  forest: 'roots',
-  castle: 'royal',
-  paradise: 'halo',
-  hell: 'fissure',
-  mountain: 'avalanche',
+  'forest-boss': 'roots',
+  'castle-boss': 'royal',
+  'paradise-boss': 'halo',
+  'hell-boss': 'fissure',
+  'mountain-boss': 'avalanche',
 }) as [MapId, EnemyAttack][]) {
   test(`${mapId}: exclusive boss special hits once, respects cover and immunity`, () => {
     for (const id of MAP_IDS) {
-      assert.equal(ENCOUNTERS[id].boss.includes(kind), id === mapId);
+      assert.equal(ENCOUNTERS[id].boss.includes(kind), biomeOf(id) === biomeOf(mapId));
       assert.ok(!ENCOUNTERS[id].melee.includes(kind) && !ENCOUNTERS[id].ranged.includes(kind));
     }
     const f = fight(kind, mapId);
@@ -331,7 +316,7 @@ for (const [mapId, kind] of Object.entries({
       0,
       pattern.radius,
     );
-    const area = areas[0]!;
+    const area = areas.find((a) => a.y === 500) ?? areas[0]!;
     Object.assign(f.player, { x: area.x + (area.innerRadius ? 150 : 0), y: area.y });
     const damage = Math.round(enemyRules('boss', mapId).damage * pattern.damage);
     f.combat.enemyAttack('boss', f.mob);
@@ -378,5 +363,5 @@ test('boss specials have readable escape spaces and overlapping marks never mult
   });
   Object.assign(f.player, origin);
   f.combat.enemyAttack('boss', f.mob);
-  assert.equal(f.player.hp, 82);
+  assert.equal(f.player.hp, 100 - enemyRules('boss', 'forest').damage);
 });

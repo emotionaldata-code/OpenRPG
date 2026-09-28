@@ -1,4 +1,4 @@
-# OpenRPG — Five Realms
+# OpenRPG — Six Realms
 
 An account-based cooperative and PvP combat prototype for up to three players in a desktop browser. Choose Forest, Castle, Paradise, Hell, or Mountain, move with WASD or arrow keys, aim with the mouse, and hold the left mouse button to charge and release to attack; right click activates your special and Q dodges. Each destination has its own layout and themed melee, ranged, and boss enemies. Testing offers unlimited respawns; Story unlocks each realm in order with one life per player. Fight opens every map for player-versus-player combat without monsters and with unlimited respawns. Permanent loot, class equipment, and packed health potions carry the first progression loop.
 
@@ -44,7 +44,7 @@ The first screen is login/registration only. After signing in you enter **Hearth
 - **Moonlit Tailor (east):** equip a skin for your selected class, or open the existing skin editor.
 - **Wayfarer Inn (southwest):** account details, logout, and account deletion.
 - **Training Grounds (northwest):** Testing, all maps, unlimited respawns.
-- **Five Realms (northeast):** Story, map unlocks and limited lives.
+- **Six Realms (northeast):** Story, map unlocks and limited lives.
 - **Dueling Gate (southeast):** Fight, all maps, player-versus-player combat.
 
 Portal dialogs provide destination selection, public/invite creation, matching public rooms and joining by room ID. Invite links retain the ID through login; approach any portal to join. An expedition uses the class, skin, equipment and potion count prepared in the village. Joining spends potions exactly as before; visiting the village never spends them. Leaving an expedition returns to the village.
@@ -55,25 +55,26 @@ Up to **24 visitors per village** share names, movement, appearance and station 
 
 Choose a destination before creating a room. Joining a listed room or invite uses that room’s map. Each authored map is **3456 × 1024**, with a distinct authored route from a safe camp to a final arena. Solid riverbanks, ramparts, lava and chasms prevent shortcuts along the outer border; these are impassable terrain, not damage zones.
 
-| Difficulty | Realm and route | Enemies | Boss attacks |
-| --- | --- | --- | --- |
-| 1 | Forest — woodland forks around a moonwater pool | 5 | Elderroot: slow slam, root grasp, fan (3 patterns) |
-| 2 | Castle — enclosed chambers with alternating north/south doorways | 7 | Hollow King: fan, royal cleave, charge, slam (4) |
-| 3 | Paradise — two garden loops around reflecting pools | 8 | Seraph: ring, solar halo, ground blast, fan, burst (5) |
-| 4 | Hell — basalt islands joined by exposed bridges | 10 | Warden: burst, hell fissure, ground blast, charge, ring, fan (6) |
-| 5 | Mountain — three ledges with two long switchbacks | 12 | Colossus: charge, avalanche, cross, ground blast, ring, slam, burst, fan (8) |
+The campaign contains **30 stages**, ordered **Desert → Forest → Castle → Mountain → Paradise → Hell**. Each biome has four combat maps with **6 / 10 / 14 / 18** enemies, introducing one new creature on each map, followed by a spacious **boss-only arena**.
 
-**Fight the boss whenever you reach it.** Bosses can attack and take damage even while ordinary enemies remain alive. Boss music starts on the first confirmed hit. Testing keeps unlimited enemy respawns.
+| Biome | Creatures introduced in order | Boss signature |
+| --- | --- | --- |
+| Desert | Dune snake, dune monster, sand skeleton, amber scorpion | Sand Lion: fast rushes and expanding Sirocco spirals |
+| Forest | Thorn bush, demon tree, spore wisp, briar spider | Forest Deer: branching Wild Hunt root waves |
+| Castle | Hex cantor, oathless knight, bone arbalist, royal executioner | Demoniac King: three rotating checkmate cleaves |
+| Mountain | Rime bat, frost wolf, storm eagle, glacier golem | Grizzly: successive Mountain Breaker avalanche walls |
+| Paradise | Weeping cherub, garden sentinel, dawn oracle, exiled harpy | Fallen Angel: outer halo, inner eclipse, targeted fall |
+| Hell | Cinder imp, ash hound, obsidian cultist, lava drake | Demon Gargoyle: cascading Wings of Damnation |
 
-Every realm has melee, ranged and boss enemies. Melee attackers flank and pursue; ranged enemies retreat and strafe. Early enemies have slower movement, gentler damage and longer pauses. Boss health grows from 450 to 1440; movement from 100 to 180 px/s; the cooldown portion drops from 1620 to 348 ms. Later realms add rushing melee, staggered volleys, paired cross shots and marked ground blasts. Wind-ups become progressively shorter, with aim/target locked when shown. Below half health, enrage adds 4–20% movement speed and reduces cooldowns by 10–35%, depending on the realm; it never shortens a warning already shown. Charges stop at terrain and hit each player at most once.
+Creatures have distinct silhouettes, attack rotations, movement speeds, health and detection ranges. Difficulty increases across stages; cooldowns have a positive floor. Bosses enrage below half health without shortening already displayed warnings. Multi-step signatures lock their geometry when telegraphed; individual waves resolve on their shown schedule and cancel on death or stun. Charges stop at terrain and hit each player once. Each biome has original travel/boss synth scores, attack sounds and animated atmospheric details; reduced-motion preferences stop ambient motion.
 
 Testing enemies return after eight seconds and players after three seconds with brief protection. Story has no player or enemy respawns. Fight remains player-only. Enemies patrol when idle and return home when pulled too far; camp remains a refuge.
 
-Content lives in `shared/src/world/map.ts` and `routes/` (one layout per realm; `regions.ts` collects them), `enemies.ts` (stats/themes), and `enemy-attacks.ts` (rotations, warning geometry and difficulty). Server AI, navigation and attack continuations live in separate modules under `server/src/simulation/`. Static map art is generated once per scene; warnings use the same geometry as damage. AI stays inside the existing 30 Hz loop, with cached navigation, throttled route searches and a 192-projectile budget for enemy fire. No AI database work or extra network message stream is added.
+Content lives in `shared/src/world/map.ts` and `routes/` (authored itineraries and arenas in `routes/campaign.ts`; the original first stages remain in their biome modules), `biomes.ts` (campaign IDs), `species.ts` (creature definitions), `enemies.ts` (stats/themes), and `enemy-attacks.ts` (rotations, warning geometry and difficulty). Server AI, navigation and attack continuations live in separate modules under `server/src/simulation/`. Static map art is generated once per scene; warnings use the same geometry as damage. AI stays inside the existing 30 Hz loop, with cached navigation, throttled route searches and a 192-projectile budget for enemy fire. No AI database work or extra network message stream is added.
 
 ## Paths, collection, and expedition equipment
 
-**Testing** lets you choose any map with unlimited player/enemy respawns. **Story** unlocks Forest → Castle → Paradise → Hell → Mountain. Every member must have unlocked the destination, including invite joins. Defeat every enemy, including the boss, once to complete a map; enemies never respawn in Story and surviving party members unlock the next realm. Players never respawn during Story. Reconnection preserves the same life and equipment; leaving and joining that story room again cannot grant a new life. A full wipe ends the expedition; start a fresh room to retry. Cleared maps can be replayed. Unlocks persist per account; unfinished rooms are not saved story instances.
+**Testing** lets you choose any map with unlimited player/enemy respawns. **Story** unlocks all thirty stages in campaign order. Every member must have unlocked the destination, including invite joins. Defeat every enemy on the selected stage once to complete it; enemies never respawn in Story and surviving party members unlock the next stage. Players never respawn during Story. Reconnection preserves the same life and equipment; leaving and joining that story room again cannot grant a new life. A full wipe ends the expedition; start a fresh room to retry. Cleared maps can be replayed. Unlocks persist per account; unfinished rooms are not saved story instances.
 
 Visit the **Quartermaster** to choose your class, collected weapon/armor and 0–5 potions, inspect all six collectible pieces, or buy/sell supplies. Its dialog tabs support arrow keys, Home and End. The **Tailor** manages skins, and the **Inn** holds account settings.
 
@@ -178,7 +179,7 @@ Only `DATABASE_URL` and `APP_ORIGIN` are required deployment variables. `TRUST_P
 - In an expedition: WASD / arrow keys: move. Mouse: aim. Hold left / release: charge / normal attack. Right click / hold: class special. Q: directional dodge.
 - Trees, stone walls, and map edges stop movement and shots. Players never block each other. Testing and Story disable friendly fire; in Fight, attacks damage other players but never their owner.
 - Testing: players return after three seconds; enemies after eight seconds. Story: one life per player and enemy, including the boss; no respawns.
-- Fight: all five maps, up to three rival players, no monsters, unlimited three-second respawns with brief protection. Class attacks, gear, potions and cooldowns work as usual. Kills count for the current room only; no loot or story progress is awarded. Packed potions are spent on entry, as in other modes.
+- Fight: all thirty stages, up to three rival players, no monsters, unlimited three-second respawns with brief protection. Class attacks, gear, potions and cooldowns work as usual. Kills count for the current room only; no loot or story progress is awarded. Packed potions are spent on entry, as in other modes.
 - R: consume one packed health potion for up to 50 HP. Full health does not waste a potion.
 - The camera follows you. The HUD shows health, party, and room information. Copy invite shares this room; Leave returns to the village.
 - Controls clear when focus is lost. A dropped connection pauses input and allows 15 seconds to recover, then returns to the village.
@@ -189,7 +190,7 @@ The brass **Audio on/off** button at the top left of both screens controls music
 
 Original synthesized menu/adventure melodies accompany clicks, major actions, three class attacks and specials, steady charging, perfect and bad releases, player/monster damage, enemy attacks, deaths, respawning, potion use, loot and Story results. Nearby combat fades with distance. Charging follows the immediate local ring; attacks, damage and pickups follow confirmed server state. No audio files, external samples, dependencies or extra server messages are needed.
 
-`client/src/audio/music.ts` holds three original scores: a gentle G-major menu theme in 6/8 with flute-like melody and plucked accompaniment, and a D-minor adventure theme in 4/4 with lower strings and soft drums. Those themes loop in roughly 32–35 seconds. A faster, eight-bar D-minor boss march begins on the first confirmed boss hit, including hits by a teammate. Boss death, player death, retreating out of range or a reset returns to the adventure theme; mute and reconnect retain the authoritative encounter state. `sounds.ts` holds typed effect recipes; `synth.ts` renders tones/noise; `audio.ts` manages playback, charging, music and mute; `audio-ui.ts` wires accessible buttons; `game-audio.ts` compares authoritative snapshots without replaying old sounds on reconnect. To add a cue, add its recipe and call `audio.play()` from the relevant presentation event. Web Audio is independent of Phaser's disabled sound manager, so the menu and adventure share one context.
+`client/src/audio/music.ts` holds the menu theme, the original fallback scores, and twelve biome scores: travel and boss arrangements for each of the six biomes, with distinct melodies, harmony and tempo. A biome's boss score begins on the first confirmed boss hit, including hits by a teammate. Boss death, player death, retreating out of range or a reset returns to the adventure theme; mute and reconnect retain the authoritative encounter state. `sounds.ts` holds typed effect recipes; `synth.ts` renders tones/noise; `audio.ts` manages playback, charging, music and mute; `audio-ui.ts` wires accessible buttons; `game-audio.ts` compares authoritative snapshots without replaying old sounds on reconnect. To add a cue, add its recipe and call `audio.play()` from the relevant presentation event. Web Audio is independent of Phaser's disabled sound manager, so the menu and adventure share one context.
 
 ## Module ownership and networking
 
@@ -209,7 +210,7 @@ Unit tests cover map spawn safety and reachability, enemy pursuit/telegraphs/lea
 
 Browser acceptance targets Chromium; audio has also been checked in Firefox. Safari remains unverified.
 
-Original placeholder pixel textures and directional sprite frames are generated in Canvas. There are no external raster art assets; the favicon is an original SVG. Desktop keyboard/mouse only; no touch controls. Browser audio uses Web Audio; browsers that block autoplay require an initial click, tap or keypress. Five larger authored maps have fifteen themed enemy appearances and progressively more complex attack rotations. No projectile prediction, historical hit rewinding, saved in-progress expeditions, or production security/operations layer. Equipped gear overlays the original or custom skin.
+Original placeholder pixel textures and directional sprite frames are generated in Canvas. There are no external raster art assets; the favicon is an original SVG. Desktop keyboard/mouse only; no touch controls. Browser audio uses Web Audio; browsers that block autoplay require an initial click, tap or keypress. Thirty authored stages have twenty-four creature types, six bosses and progressively more complex attack rotations. No projectile prediction, historical hit rewinding, saved in-progress expeditions, or production security/operations layer. Equipped gear overlays the original or custom skin.
 
 For file-level ownership and future boundaries, see [architecture notes](docs/architecture.md).
 

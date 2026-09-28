@@ -1,5 +1,6 @@
 import {
   CHARGE,
+  getMap,
   type WorldState,
   type Player,
   type Mob,
@@ -66,7 +67,8 @@ export class CombatAudio {
           mob.hp > 0 &&
           Math.hypot(mob.x - listener.x, mob.y - listener.y) < 850,
       );
-    this.music(fightingBoss ? 'boss' : 'adventure');
+    const biome = getMap(state.mapId).biome;
+    this.music(`${biome}-${fightingBoss ? 'boss' : 'adventure'}`);
     if (!active) {
       this.primed = false;
       return;
@@ -132,10 +134,7 @@ export class CombatAudio {
           this.play(m.hp <= 0 ? 'mob-death' : 'mob-hurt', gain);
         }
         if (m.lastAttackAt > old.lastAttackAt) {
-          this.play(
-            m.role === 'boss' ? 'enemy-boss' : m.role === 'melee' ? 'enemy-melee' : 'enemy-ranged',
-            gain,
-          );
+          this.play(`${biome}-${m.role === 'boss' ? 'boss' : 'mob'}`, gain);
         }
       }
       this.mobs.set(id, mobSnapshot(m));

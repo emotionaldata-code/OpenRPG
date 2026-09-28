@@ -1,5 +1,6 @@
 import {
   ENEMY_AI,
+  speciesFor,
   ENCOUNTERS,
   Mob,
   enemyRules,
@@ -51,7 +52,8 @@ export class Enemies {
           x: home.x,
           y: home.y,
           role: home.role,
-          hp: enemyRules(home.role, map.id).health,
+          species: home.species ?? '',
+          hp: enemyRules(home.role, map.id, home.species).health,
         }),
       );
       this.brains.set(id, {
@@ -73,7 +75,7 @@ export class Enemies {
       if (!brain) {
         continue;
       }
-      const rules = enemyRules(mob.role, this.map.id),
+      const rules = enemyRules(mob.role, this.map.id, mob.species),
         now = this.state.elapsed;
       if (mob.hp <= 0) {
         mob.attackAt = 0;
@@ -158,6 +160,7 @@ export class Enemies {
       const distance = Math.hypot(target.x - mob.x, target.y - mob.y);
       mob.aim = Math.atan2(target.y - mob.y, target.x - mob.x);
       const attacks =
+        speciesFor(mob.species, this.map.id)?.attacks ??
         ENCOUNTERS[this.map.id][mob.role === 'boss' || mob.role === 'melee' ? mob.role : 'ranged'];
       let kind: EnemyAttack = attacks[brain.sequence % attacks.length]!;
       // A short-range attack becomes a rush when kited; the next rotation still advances.
@@ -237,7 +240,7 @@ export class Enemies {
   }
   private target(mob: Mob, brain: Brain): Player | undefined {
     let target: Player | undefined,
-      nearest = enemyRules(mob.role, this.map.id).range;
+      nearest = enemyRules(mob.role, this.map.id, mob.species).range;
     const camp = this.map.spawns[0]!;
     for (const p of this.state.players.values()) {
       const distance = Math.hypot(p.x - mob.x, p.y - mob.y);
@@ -258,7 +261,7 @@ export class Enemies {
     return target;
   }
   private strafe(mob: Mob, brain: Brain, distance: number, dt: number): void {
-    const rules = enemyRules(mob.role, this.map.id);
+    const rules = enemyRules(mob.role, this.map.id, mob.species);
     const angle =
       mob.aim +
       (distance < (mob.role === 'boss' ? 125 : 165) ? Math.PI : (brain.strafe * Math.PI) / 2);
@@ -279,7 +282,7 @@ export class Enemies {
     }
   }
   private walk(mob: Mob, brain: Brain, goal: Point, dt: number, speed = 1): void {
-    const rules = enemyRules(mob.role, this.map.id);
+    const rules = enemyRules(mob.role, this.map.id, mob.species);
     // Open sight needs no grid search. Obstructed routes refresh at most every 450ms per mob.
     if (terrainHit(mob, goal, rules.radius + 1, this.map.obstacles) === null) {
       brain.path = [goal];

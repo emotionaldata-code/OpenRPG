@@ -5,8 +5,8 @@ import { Navigation } from '../../server/src/simulation/navigation.js';
 import { terrainHit } from '../../shared/src/world/collision.js';
 import { MAP_IDS, MAPS } from '../../shared/src/world/map.js';
 
-test('five destinations preview, create, render, and leave cleanly', async ({ page }, testInfo) => {
-  test.setTimeout(90000);
+test('thirty stages preview, create, render, and leave cleanly', async ({ page }, testInfo) => {
+  test.setTimeout(420000);
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   const password = 'browser-test-password';
@@ -69,7 +69,9 @@ test('five destinations preview, create, render, and leave cleanly', async ({ pa
   }
 });
 
-test('forest route reaches the boss and changes music on its first hit', async ({ page }, info) => {
+test('forest boss route reaches the boss and changes music on its first hit', async ({
+  page,
+}, info) => {
   test.setTimeout(210000);
   const password = 'boss-browser-password';
   const errors: string[] = [];
@@ -81,6 +83,8 @@ test('forest route reaches the boss and changes music on its first hit', async (
   await page.locator('#password').fill(password);
   await page.locator('#auth-submit').click();
   await expect(page.locator('#village-game canvas')).toBeVisible();
+  await portal(page);
+  await page.locator('#map-forest-boss').click();
   const keys = new Set<string>();
   try {
     await services(page);
@@ -92,8 +96,8 @@ test('forest route reaches the boss and changes music on its first hit', async (
     await page.locator('#create').click();
     await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#game canvas')).toBeVisible();
-    await expect(page.locator('#combat-status')).toContainText('Elderroot: 450/450 HP');
-    const navigation = new Navigation(MAPS.forest);
+    await expect(page.locator('#combat-status')).toContainText('The Forest Deer:');
+    const navigation = new Navigation(MAPS['forest-boss']);
     let heardBoss = false;
     const deadline = Date.now() + 180000;
     while (Date.now() < deadline) {
@@ -154,7 +158,7 @@ test('forest route reaches the boss and changes music on its first hit', async (
                 ).__openrpg.audio().music,
             ),
           )
-          .toBe('boss');
+          .toBe('forest-boss');
         heardBoss = true;
         expect(
           mobs.filter((m) => m.role !== 'boss' && m.generation === 0 && m.hp > 0),
@@ -169,7 +173,7 @@ test('forest route reaches the boss and changes music on its first hit', async (
             Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y),
         )[0];
       const target = guard ?? boss;
-      const clear = terrainHit(player, target, 12, MAPS.forest.obstacles) === null;
+      const clear = terrainHit(player, target, 12, MAPS['forest-boss'].obstacles) === null;
       const distance = Math.hypot(player.x - target.x, player.y - target.y);
       const route = navigation.route(player, target, 10);
       const next = route.find((point) => Math.hypot(point.x - player.x, point.y - player.y) > 18);

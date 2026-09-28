@@ -168,7 +168,7 @@ test('adventure audio shares mute state; charging, disconnect and leaving clean 
     await page.locator('#create').click();
     await expect(page.locator('#loading')).toBeHidden();
     await expect(page.locator('#game canvas')).toBeVisible();
-    expect((await audioState(page)).music).toBe('adventure');
+    expect((await audioState(page)).music).toBe('desert-adventure');
     const toggle = page.locator('#play [data-audio-toggle]');
     await expect(toggle).toHaveAttribute('aria-pressed', 'true');
     const canvas = (await page.locator('#game canvas').boundingBox())!;

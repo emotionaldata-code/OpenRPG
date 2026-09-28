@@ -163,7 +163,7 @@ export class AdventurePanel {
     element('potion-stock').textContent =
       `${this.profile?.potions ?? 0} stored · carry up to ${POTIONS.maxCarry}`;
     element('collection-summary').textContent = this.profile
-      ? `${this.profile.items.length} / ${ITEMS.length} relics collected · ${this.profile.potions} health potion${this.profile.potions === 1 ? '' : 's'} · ${this.profile.completedMaps} / 5 story maps cleared`
+      ? `${this.profile.items.length} / ${ITEMS.length} relics collected · ${this.profile.potions} health potion${this.profile.potions === 1 ? '' : 's'} · ${this.profile.completedMaps} / 30 story stages cleared`
       : 'Log in to see your collected equipment.';
     const root = element('item-collection');
     root.replaceChildren();

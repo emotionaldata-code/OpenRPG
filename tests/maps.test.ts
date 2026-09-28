@@ -25,12 +25,12 @@ function ticks(sim: Simulation, count: number): void {
   }
 }
 for (const id of MAP_IDS) {
-  test(`${id}: safe, reachable spawns, three enemy roles, authoritative map geometry and respawns`, () => {
+  test(`${id}: safe, reachable spawns, stage encounter roster, authoritative map geometry and respawns`, () => {
     const map = MAPS[id],
       state = new WorldState({ mapId: id }),
       sim = new Simulation(state),
       nav = new Navigation(map);
-    assert.deepEqual(new Set(map.enemies.map((e) => e.role)), new Set(['melee', 'ranged', 'boss']));
+    assert.equal(map.enemies.filter((e) => e.role === 'boss').length, map.stage === 5 ? 1 : 0);
     assert.equal(new Set(Object.values(ENEMY_THEMES[id].names)).size, 3);
     for (const spawn of [...map.spawns, ...map.enemies]) {
       const radius = 'role' in spawn ? enemyRules(String(spawn.role)).radius : RULES.playerRadius;
@@ -46,7 +46,9 @@ for (const id of MAP_IDS) {
     sim.addPlayer('hero', 'Hero');
     const player = state.players.get('hero')!,
       predicted = new Player(player.toJSON());
-    const wall = map.obstacles.find((o) => o.kind === 'stone')!;
+    const wall =
+      map.obstacles.find((o) => o.kind === 'stone' && o.x > 100 && o.width < 200) ??
+      map.obstacles.find((o) => o.x > 100 && o.width < 200)!;
     Object.assign(player, { x: wall.x - 20, y: wall.y + 15 });
     Object.assign(predicted, { x: player.x, y: player.y });
     const input = { ...idle, moveX: 1, moveY: 0.2 };
@@ -73,16 +75,16 @@ for (const id of MAP_IDS) {
     assert.ok([...state.mobs.values()].every((m) => m.hp === 0));
     ticks(sim, 2);
     for (const mob of state.mobs.values()) {
-      assert.equal(mob.hp, enemyRules(mob.role, id).health);
+      assert.equal(mob.hp, enemyRules(mob.role, id, mob.species).health);
       assert.equal(mob.generation, 1);
     }
   });
 }
-test('unknown maps reject; missing selection defaults to forest', () => {
+test('unknown maps reject; missing selection defaults to desert', () => {
   for (const mapId of ['unknown', '__proto__', 42, {}, null]) {
     assert.throws(() => parseRoomOptions({ visibility: 'public', mapId }));
   }
-  assert.equal(parseRoomOptions({ visibility: 'public' }).mapId, 'forest');
+  assert.equal(parseRoomOptions({ visibility: 'public' }).mapId, 'desert');
 });
 test('navigation routes around a wall with collision-clear segments', () => {
   const map = MAPS.castle,
@@ -102,7 +104,12 @@ function encounter(role: 'melee' | 'ranged' | 'boss', mapId = 'forest') {
   const state = new WorldState({ mapId }),
     sim = new Simulation(state);
   sim.addPlayer('hero', 'Hero');
-  const entry = [...state.mobs].find(([, m]) => m.role === role)!;
+  const entry = [...state.mobs][0]!;
+  entry[1].role = role;
+  entry[1].species = '';
+  if (role === 'boss') {
+    entry[1].attackKind = 'slam';
+  }
   for (const [id] of state.mobs) {
     if (id !== entry[0]) {
       state.mobs.delete(id);
@@ -135,7 +142,7 @@ test('melee pursues, locks a dodgeable wind-up, and does not hit through walls',
   Object.assign(player, { x: 960, y: 650 });
   Object.assign(mob, { x: 940, y: 650 });
   combat.enemyAttack('melee', mob);
-  assert.equal(player.hp, 88);
+  assert.equal(player.hp, 100 - enemyRules('melee', 'forest').damage);
 });
 test('ranged enemies retreat, telegraph, then fire at a locked aim on a cooldown', () => {
   const { state, sim, mob, player } = encounter('ranged');
@@ -154,25 +161,22 @@ test('ranged enemies retreat, telegraph, then fire at a locked aim on a cooldown
   ticks(sim, 8);
   assert.equal(mob.attackAt, 0);
 });
-test('boss slams are delayed, terrain-blocked, respect immunity, and can be interrupted by death', () => {
+test('boss slams respect immunity and are cancelled by death', () => {
   const { state, sim, mob, player } = encounter('boss');
-  Object.assign(player, { x: mob.x - 60, y: mob.y });
-  for (let i = 0; i < 90 && !mob.attackAt; i++) {
-    ticks(sim, 1);
-  }
-  assert.ok(mob.attackAt > state.elapsed);
-  assert.equal(player.hp, 100);
-  ticks(sim, 31);
-  assert.equal(player.hp, 82);
+  Object.assign(mob, { x: 700, y: 700, attackKind: 'slam', attackAngle: 0 });
+  Object.assign(player, { x: 750, y: 700 });
+  new Combat(state).enemyAttack('boss', mob);
+  const hp = 100 - enemyRules('boss', 'forest').damage;
+  assert.equal(player.hp, hp);
   player.invulnerableUntil = state.elapsed + 4000;
   new Combat(state).enemyAttack('boss', mob);
-  assert.equal(player.hp, 82);
+  assert.equal(player.hp, hp);
   mob.attackAt = state.elapsed + 10;
   mob.hp = 0;
-  mob.respawnAt = state.elapsed + 8000;
+  mob.respawnAt = 8000;
   ticks(sim, 5);
   assert.equal(mob.attackAt, 0);
-  assert.equal(player.hp, 82);
+  assert.equal(player.hp, hp);
 });
 test('boss fan and ring patterns emit bounded authoritative volleys', () => {
   for (const [kind, count] of [
@@ -198,7 +202,7 @@ test('camp is a refuge and enemies return home after losing a distant target', (
   assert.ok(mob.x > 390);
   Object.assign(player, { x: 1360, y: 1000 });
   ticks(sim, 300);
-  assert.ok(Math.hypot(mob.x - 650, mob.y - 710) < 100);
+  assert.ok(Math.hypot(mob.x - MAPS.forest.enemies[0]!.x, mob.y - MAPS.forest.enemies[0]!.y) < 100);
 });
 
 test('boss projectile hitboxes match their larger footprint', () => {

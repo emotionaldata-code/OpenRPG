@@ -115,7 +115,7 @@ test('audio: nearby monsters and allies are quieter; distant monsters are silent
   f.patch();
   assert.deepEqual(
     f.heard.map((x) => x.sound),
-    ['mage-shot', 'enemy-ranged'],
+    ['mage-shot', 'forest-mob'],
   );
   assert.ok(f.heard.every((x) => x.volume > 0 && x.volume < 1));
   f.heard.length = 0;
@@ -131,7 +131,7 @@ test('audio: boss score follows confirmed engagement across mute/reconnect and r
     player = new Player({ name: 'Hero', x: 3000, y: 500, protectedUntil: 0, hp: 100 }),
     boss = new Mob({ role: 'boss', x: 3080, y: 500, hp: 450 });
   state.players.set('hero', player);
-  state.mobs.set('boss', boss);
+  state.mobs.set('forest-boss', boss);
   const music: string[] = [];
   const audio = new CombatAudio(
     () => {},
@@ -142,31 +142,31 @@ test('audio: boss score follows confirmed engagement across mute/reconnect and r
     audio.update(state, 'hero', active);
     return music.at(-1);
   };
-  assert.equal(mode(), 'adventure', 'proximity alone does not start boss music');
+  assert.equal(mode(), 'forest-adventure', 'proximity alone does not start boss music');
   boss.engaged = true;
   boss.hp--;
-  assert.equal(mode(), 'boss');
-  assert.equal(mode(false), 'boss', 'muting does not forget an encounter');
+  assert.equal(mode(), 'forest-boss');
+  assert.equal(mode(false), 'forest-boss', 'muting does not forget an encounter');
   player.x = 250;
-  assert.equal(mode(), 'adventure', 'retreating to camp restores exploration');
+  assert.equal(mode(), 'forest-adventure', 'retreating to camp restores exploration');
   player.x = 3000;
   audio.reset();
-  assert.equal(mode(), 'boss', 'full reconnect snapshot resumes the score');
+  assert.equal(mode(), 'forest-boss', 'full reconnect snapshot resumes the score');
   player.hp = 0;
-  assert.equal(mode(), 'adventure');
+  assert.equal(mode(), 'forest-adventure');
   player.hp = 100;
   boss.engaged = false;
-  assert.equal(mode(), 'adventure', 'leash reset returns to exploration');
+  assert.equal(mode(), 'forest-adventure', 'leash reset returns to exploration');
   boss.engaged = true;
   boss.hp = 0;
-  assert.equal(mode(), 'adventure', 'boss death returns to exploration');
+  assert.equal(mode(), 'forest-adventure', 'boss death returns to exploration');
   boss.generation++;
   boss.hp = 450;
   boss.engaged = false;
-  assert.equal(mode(), 'adventure', 'respawning does not start music without a hit');
+  assert.equal(mode(), 'forest-adventure', 'respawning does not start music without a hit');
   boss.engaged = true;
   state.outcome = 'complete';
-  assert.equal(mode(), 'adventure');
+  assert.equal(mode(), 'forest-adventure');
 });
 
 test('audio: perfect release accent follows confirmed quality, once, without reconnect replay', () => {

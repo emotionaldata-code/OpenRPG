@@ -9,12 +9,14 @@ import {
   RULES,
   WORLD,
   enemyRole,
+  speciesFor,
   enemyRules,
   ENEMY_THEMES,
   type Player,
   type Mob,
 } from '@openrpg/shared';
 import { createTextures } from '../art/art';
+import { Atmosphere } from '../art/atmosphere';
 import { drawWorld } from '../art/world-art';
 import { createEnemyTextures } from '../art/enemy-art';
 import { RoomSkins } from './room-skins';
@@ -42,6 +44,7 @@ export class ExpeditionScene extends Phaser.Scene {
   private skins!: RoomSkins;
   private actors = new Map<string, ActorView>();
   private combat!: CombatView;
+  private atmosphere!: Atmosphere;
   private charge!: ChargeView;
   private loot!: LootView;
   private aimLine!: Phaser.GameObjects.Graphics;
@@ -60,6 +63,7 @@ export class ExpeditionScene extends Phaser.Scene {
       createEnemyTextures(this, map.id);
     }
     drawWorld(this, map, fight);
+    this.atmosphere = new Atmosphere(this, map);
     this.skins = new RoomSkins(this);
     this.controls = new Controls(this, () => {
       if (
@@ -162,6 +166,7 @@ export class ExpeditionScene extends Phaser.Scene {
         .lineStyle(1, 0xe2cd92, 0.7)
         .strokeCircle(x + Math.cos(intent.aim) * reach, y + Math.sin(intent.aim) * reach, 3);
     }
+    this.atmosphere.draw(time);
     this.combat.draw();
     this.loot.draw();
     this.charge.draw(intent);
@@ -180,7 +185,9 @@ export class ExpeditionScene extends Phaser.Scene {
   }
   private drawActor(id: string, actor: Player | Mob, kind: 'player' | 'enemy', aim: number): void {
     const mob = kind === 'enemy' ? (actor as Mob) : undefined;
-    const texture = mob ? `enemy-${enemyRole(mob.role)}` : this.skins.key(actor as Player);
+    const texture = mob
+      ? `enemy-${mob.species || enemyRole(mob.role)}`
+      : this.skins.key(actor as Player);
     const boss = mob?.role === 'boss',
       height = boss ? 85 : 50;
     let view = this.actors.get(id);
@@ -254,7 +261,10 @@ export class ExpeditionScene extends Phaser.Scene {
       .setText(
         player
           ? `${player.name}${id === this.net.room.sessionId ? ' · YOU' : opponent ? ' · RIVAL' : ''}`
-          : ENEMY_THEMES[this.net.map.id].names[enemyRole(mob!.role)].toUpperCase(),
+          : (
+              speciesFor(mob!.species, this.net.map.id)?.name ??
+              ENEMY_THEMES[this.net.map.id].names[enemyRole(mob!.role)]
+            ).toUpperCase(),
       );
     const width = boss ? 64 : 34;
     view.bar
@@ -268,7 +278,9 @@ export class ExpeditionScene extends Phaser.Scene {
         x - width / 2 + 1,
         y - height + 12,
         ((width - 2) * actor.hp) /
-          (kind !== 'enemy' ? RULES.playerHealth : enemyRules(mob!.role, this.net.map.id).health),
+          (kind !== 'enemy'
+            ? RULES.playerHealth
+            : enemyRules(mob!.role, this.net.map.id, mob!.species).health),
         3,
       );
     if (player) {

@@ -8,9 +8,12 @@ export function paintLandmark(c: CanvasRenderingContext2D, map: GameMap): void {
     p = map.palette;
   c.save();
   c.translate(x, y);
+  if (map.stage === 5) {
+    c.scale(2.2, 2.2);
+  }
   c.strokeStyle = p.highlight;
   c.lineWidth = 2;
-  if (map.id === 'castle') {
+  if (map.biome === 'castle') {
     rect(c, p.edge, -76, -62, 152, 124);
     rect(c, p.path, -72, -58, 144, 116);
     for (let row = -50; row < 50; row += 14) {
@@ -24,7 +27,7 @@ export function paintLandmark(c: CanvasRenderingContext2D, map: GameMap): void {
     rect(c, p.accent, -17, -48, 2, 130);
     rect(c, p.accent, 15, -48, 2, 130);
   } else {
-    const spokes = map.id === 'mountain' ? 6 : map.id === 'hell' ? 5 : 12;
+    const spokes = map.biome === 'mountain' ? 6 : map.biome === 'hell' ? 5 : 12;
     c.beginPath();
     c.ellipse(0, 0, 83, 67, 0, 0, Math.PI * 2);
     c.stroke();
@@ -33,14 +36,14 @@ export function paintLandmark(c: CanvasRenderingContext2D, map: GameMap): void {
       const sx = Math.cos(angle),
         sy = Math.sin(angle);
       c.beginPath();
-      if (map.id === 'hell') {
+      if (map.biome === 'hell') {
         const other = angle + (Math.PI * 4) / spokes;
         c.moveTo(sx * 70, sy * 56);
         c.lineTo(Math.cos(other) * 70, Math.sin(other) * 56);
       } else {
         c.moveTo(sx * 20, sy * 16);
         c.lineTo(sx * 74, sy * 59);
-        if (map.id === 'forest' || map.id === 'mountain') {
+        if (map.biome === 'forest' || map.biome === 'mountain') {
           c.lineTo(sx * 57 - sy * 10, sy * 45 + sx * 10);
         }
       }

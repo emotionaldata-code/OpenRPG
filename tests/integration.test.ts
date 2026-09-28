@@ -114,7 +114,7 @@ test('loading players cannot act or take damage, including across reconnects', a
   const host = authoritative(room);
   const player = host.state.players.get(room.sessionId)!;
   const combat = new Combat(host.state);
-  const mob = host.state.mobs.get('melee-1')!;
+  const mob = host.state.mobs.get('ranged-1')!;
   // Outside camp, with no protection: the loading state itself must block hits.
   Object.assign(player, { x: 750, y: 790, hp: 50, protectedUntil: 0 });
   Object.assign(mob, { x: 720, y: 790, attackKind: 'strike', attackAngle: 0 });
@@ -122,10 +122,10 @@ test('loading players cannot act or take damage, including across reconnects', a
   Object.assign(input.data, { moveX: 1, fire: true, special: true, dash: true });
   input.send();
   room.send('potion');
-  combat.enemyAttack('melee-1', mob);
-  combat.fire('melee-1', mob, 0, 'bolt');
+  combat.enemyAttack('ranged-1', mob);
+  combat.fire('ranged-1', mob, 0, 'bolt');
   combat.step(0.2);
-  combat.removeOwner('melee-1');
+  combat.removeOwner('ranged-1');
   await sleep(150);
   assert.equal(player.connected, false);
   assert.equal(player.ready, false);
@@ -161,7 +161,7 @@ test('loading players cannot act or take damage, including across reconnects', a
   await until(() => player.x > 750);
   player.protectedUntil = 0;
   Object.assign(mob, { x: player.x - 30, y: player.y, attackKind: 'strike', attackAngle: 0 });
-  combat.enemyAttack('melee-1', mob);
+  combat.enemyAttack('ranged-1', mob);
   assert.ok(player.hp < 50);
   await room.leave();
 });
@@ -586,10 +586,10 @@ test('party kills create personal drops, require collection and isolate other ro
   const first = accountId(a.sessionId),
     second = accountId(b.sessionId);
   const p = room.state.players.get(a.sessionId)!;
-  const mob = room.state.mobs.get('melee-1')!;
+  const mob = room.state.mobs.get('ranged-1')!;
   const mage = room.state.players.get(b.sessionId)!;
   Object.assign(mage, { x: p.x - 100, y: p.y });
-  Object.assign(mob, { x: p.x + 35, y: p.y, hp: 1 });
+  Object.assign(mob, { x: p.x + 35, y: p.y, hp: 1, role: 'melee' });
   room.simulation.applyInput(
     a.sessionId,
     { moveX: 0, moveY: 0, aim: 0, fire: true, special: false },
@@ -625,10 +625,10 @@ test('story room enforces map locks, one life per account, terminal admission an
   const sdk = new Client('ws://localhost:2568');
   sdk.http.options.headers = { Cookie: `openrpg_session=${account.token}` };
   const options = { visibility: 'public', mode: 'story', characterClass: 'warrior' };
-  await assert.rejects(sdk.create('expedition', { ...options, mapId: 'castle' }));
+  await assert.rejects(sdk.create('expedition', { ...options, mapId: 'desert-2' }));
   const room = await sdk.create<WorldState>(
     'expedition',
-    { ...options, mapId: 'forest' },
+    { ...options, mapId: 'desert' },
     WorldState,
   );
   connected.push(room);
@@ -651,7 +651,7 @@ test('story room enforces map locks, one life per account, terminal admission an
   await leave(room, dead);
   const castle = await sdk.create<WorldState>(
     'expedition',
-    { ...options, mapId: 'castle' },
+    { ...options, mapId: 'desert-2' },
     WorldState,
   );
   connected.push(castle);
@@ -660,7 +660,7 @@ test('story room enforces map locks, one life per account, terminal admission an
     otherSdk.joinById(castle.roomId, {
       characterClass: 'archer',
       mode: 'testing',
-      mapId: 'forest',
+      mapId: 'desert',
     }),
   );
   const helperAccount = await accounts.register({
@@ -670,7 +670,7 @@ test('story room enforces map locks, one life per account, terminal admission an
   await store.reward(helperAccount.profile.id, 'helper-unlock', {
     items: [],
     potions: 0,
-    completedMap: 'forest',
+    completedMap: 'desert',
   });
   const helperSdk = new Client('ws://localhost:2568');
   helperSdk.http.options.headers = { Cookie: `openrpg_session=${helperAccount.token}` };

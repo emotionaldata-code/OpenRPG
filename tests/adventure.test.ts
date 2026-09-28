@@ -27,7 +27,7 @@ test('story enemies stay dead after one defeat; completion still requires every 
     sim = new Simulation(state);
   sim.addPlayer('hero', 'Hero');
   const mobs = [...state.mobs.values()];
-  const survivor = mobs.find((mob) => mob.role === 'melee')!;
+  const survivor = mobs[0]!;
   for (const mob of mobs) {
     if (mob !== survivor) {
       mob.hp = 0;
@@ -259,7 +259,7 @@ test('admission checks unlocks, ownership and class before spending; concurrent 
   assert.equal((await store.profile(id)).potions, 1);
   assert.deepEqual((await store.profile(id)).items, [{ id: 'oak-bow', quantity: 1 }]);
 });
-test('story progress advances sequentially once and unlocks all five maps', async () => {
+test('story progress advances sequentially once and unlocks all thirty stages', async () => {
   const id = await user();
   await store.reward(id, 'skip', { items: [], potions: 0, completedMap: 'hell' });
   assert.equal((await store.profile(id)).completedMaps, 0);

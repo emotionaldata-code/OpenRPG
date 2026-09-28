@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
 import { WORLD, MAPS, ENEMY_AI, type GameMap } from '@openrpg/shared';
 import { canvas, rect } from './pixel-canvas';
+import { paintBiomeDetails } from './biome-details';
 import { paintLandmark } from './landmark-art';
 import { worldText } from './world-text';
 
@@ -9,7 +10,7 @@ export function terrainCanvas(map: GameMap = MAPS.forest): HTMLCanvasElement {
     const p = map.palette,
       width = WORLD.width / 2,
       height = WORLD.height / 2;
-    let seed = 741;
+    let seed = [...map.id].reduce((n, c) => n * 31 + c.charCodeAt(0), 741) >>> 0;
     const random = (): number => {
       seed = (seed * 1664525 + 1013904223) >>> 0;
       return seed / 4294967296;
@@ -36,19 +37,26 @@ export function terrainCanvas(map: GameMap = MAPS.forest): HTMLCanvasElement {
     for (let i = 0; i < 320; i++) {
       const x = 25 + random() * (width - 50),
         y = 25 + random() * (height - 50);
-      if (map.id === 'hell') {
+      if (map.biome === 'desert') {
+        rect(c, p.highlight, x, y, 16, 1);
+        rect(c, p.stone, x + 3, y + 3, 10, 1);
+        if (i % 7 === 0) {
+          rect(c, '#6e8050', x, y - 7, 3, 9);
+          rect(c, '#6e8050', x - 3, y - 5, 8, 2);
+        }
+      } else if (map.biome === 'hell') {
         rect(c, '#dd693f', x, y, 8, 1);
         rect(c, '#933b30', x + 5, y + 1, 2, 4);
-      } else if (map.id === 'castle') {
+      } else if (map.biome === 'castle') {
         rect(c, p.edge, x, y, 14, 1);
         rect(c, p.edge, x, y, 1, 7);
-      } else if (map.id === 'mountain') {
+      } else if (map.biome === 'mountain') {
         rect(c, '#dce9e9', x, y, 7, 2);
         rect(c, '#cbdcdf', x + 2, y - 1, 4, 1);
       } else {
         rect(c, p.accent, x, y, 1, 3);
         if (i % 4 === 0) {
-          rect(c, map.id === 'paradise' ? '#f9dce0' : '#d2bd77', x - 1, y - 1, 3, 2);
+          rect(c, map.biome === 'paradise' ? '#f9dce0' : '#d2bd77', x - 1, y - 1, 3, 2);
         }
       }
     }
@@ -64,7 +72,13 @@ export function terrainCanvas(map: GameMap = MAPS.forest): HTMLCanvasElement {
       rect(c, p.highlight, x - 2, y - 2, w + 4, h + 4);
       rect(
         c,
-        o.kind === 'water' ? '#284f61' : o.kind === 'lava' ? '#ba452b' : '#263c54',
+        o.kind === 'sand'
+          ? '#a67b43'
+          : o.kind === 'water'
+            ? '#284f61'
+            : o.kind === 'lava'
+              ? '#ba452b'
+              : '#263c54',
         x,
         y,
         w,
@@ -74,15 +88,22 @@ export function terrainCanvas(map: GameMap = MAPS.forest): HTMLCanvasElement {
         for (let col = 6; col < w - 10; col += 24) {
           rect(
             c,
-            o.kind === 'water' ? '#518494' : o.kind === 'lava' ? '#ffad4f' : '#405b76',
+            o.kind === 'sand'
+              ? '#c89b58'
+              : o.kind === 'water'
+                ? '#518494'
+                : o.kind === 'lava'
+                  ? '#ffad4f'
+                  : '#405b76',
             x + col,
-            y + row,
-            10,
+            y + row + (o.kind === 'sand' ? Math.sin(col / 24) * 3 : 0),
+            o.kind === 'sand' ? 18 : 10,
             1,
           );
         }
       }
     }
+    paintBiomeDetails(c, map);
     paintLandmark(c, map);
     const camp = map.spawns[0]!;
     c.strokeStyle = p.accent;
@@ -107,7 +128,7 @@ function treeCanvas(map: GameMap): HTMLCanvasElement {
     rect(c, p.edge, 5, 47, 34, 7);
     rect(c, '#594936', 18, 31, 9, 22);
     rect(c, '#806344', 18, 33, 3, 19);
-    if (map.id === 'hell') {
+    if (map.biome === 'hell') {
       rect(c, '#6e4145', 19, 7, 7, 42);
       rect(c, '#9d5350', 9, 20, 15, 5);
       rect(c, '#9d5350', 28, 11, 5, 22);
@@ -123,7 +144,7 @@ function treeCanvas(map: GameMap): HTMLCanvasElement {
       rect(c, p.edge, x!, y!, w!, h!);
       rect(
         c,
-        map.id === 'paradise' ? '#e6c9d1' : map.id === 'mountain' ? '#608893' : '#24523c',
+        map.biome === 'paradise' ? '#e6c9d1' : map.biome === 'mountain' ? '#608893' : '#24523c',
         x! + 2,
         y!,
         w! - 5,
@@ -131,7 +152,7 @@ function treeCanvas(map: GameMap): HTMLCanvasElement {
       );
       rect(
         c,
-        map.id === 'mountain' ? '#e1eef0' : map.id === 'paradise' ? '#fff0dc' : '#497c52',
+        map.biome === 'mountain' ? '#e1eef0' : map.biome === 'paradise' ? '#fff0dc' : '#497c52',
         x! + 4,
         y! + 1,
         w! - 11,
@@ -162,12 +183,12 @@ export function drawWorld(scene: Phaser.Scene, map: GameMap, fight = false): voi
       for (let x = o.x + 22; x < o.x + o.width; x += 25) {
         g.lineBetween(x, o.y - 8, x, o.y + o.height - 2);
       }
-      if (map.id === 'castle') {
+      if (map.biome === 'castle') {
         for (let x = o.x; x < o.x + o.width; x += 24) {
           g.fillStyle(color(p.highlight)).fillRect(x, o.y - 20, Math.min(12, o.x + o.width - x), 8);
         }
       }
-      if (map.id === 'hell') {
+      if (map.biome === 'hell') {
         g.lineStyle(2, 0xe58b50).lineBetween(o.x + 6, o.y, o.x + o.width / 2, o.y + o.height - 5);
       }
     }

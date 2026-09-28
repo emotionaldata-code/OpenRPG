@@ -46,8 +46,8 @@ after(async () => {
 });
 test('class-removal migration preserves accounts and sessions, supports rollback and fresh installs', async () => {
   await migrate(db.url);
-  assert.equal((await db.pool.query('SELECT * FROM pgmigrations')).rowCount, 5);
-  for (let step = 0; step < 4; step++) {
+  assert.equal((await db.pool.query('SELECT * FROM pgmigrations')).rowCount, 6);
+  for (let step = 0; step < 5; step++) {
     await migrate(db.url, 'down');
   }
   const row = await db.pool.query(
@@ -76,7 +76,7 @@ test('class-removal migration preserves accounts and sessions, supports rollback
     (await db.pool.query('SELECT * FROM sessions WHERE account_id=$1', [id])).rowCount,
     1,
   );
-  for (let step = 0; step < 4; step++) {
+  for (let step = 0; step < 5; step++) {
     await migrate(db.url, 'down');
   }
   assert.equal(

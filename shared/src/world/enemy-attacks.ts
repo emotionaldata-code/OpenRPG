@@ -1,6 +1,13 @@
+import { biomeOf, stageOf, mapCatalog, type BiomeId } from './biomes.js';
 import type { EnemyRole, MapId } from './map.js';
 
 export type EnemyAttack =
+  | 'sandstorm'
+  | 'wildhunt'
+  | 'checkmate'
+  | 'earthshatter'
+  | 'eclipse'
+  | 'cataclysm'
   | 'strike'
   | 'bolt'
   | 'slam'
@@ -17,6 +24,7 @@ export type EnemyAttack =
   | 'avalanche';
 export interface AttackPattern {
   name?: string;
+  durationMs?: number;
   reach: number;
   windupMs: number;
   recoveryMs: number;
@@ -26,6 +34,66 @@ export interface AttackPattern {
 }
 // Geometry is shared by damage and warnings. Damage is relative to the enemy's base hit.
 export const ENEMY_ATTACKS: Readonly<Record<EnemyAttack, AttackPattern>> = {
+  sandstorm: {
+    name: 'Sirocco spiral',
+    reach: 480,
+    windupMs: 950,
+    recoveryMs: 1500,
+    durationMs: 1200,
+    damage: 0.65,
+    count: 0,
+    radius: 48,
+  },
+  wildhunt: {
+    name: 'Wild hunt',
+    reach: 480,
+    windupMs: 1000,
+    recoveryMs: 1600,
+    durationMs: 1300,
+    damage: 0.7,
+    count: 0,
+    radius: 45,
+  },
+  checkmate: {
+    name: 'King’s checkmate',
+    reach: 460,
+    windupMs: 1100,
+    recoveryMs: 1800,
+    durationMs: 1500,
+    damage: 0.8,
+    count: 0,
+    radius: 260,
+  },
+  earthshatter: {
+    name: 'Mountain breaker',
+    reach: 470,
+    windupMs: 1100,
+    recoveryMs: 1700,
+    durationMs: 1400,
+    damage: 0.8,
+    count: 0,
+    radius: 60,
+  },
+  eclipse: {
+    name: 'Fall from grace',
+    reach: 480,
+    windupMs: 1200,
+    recoveryMs: 2000,
+    durationMs: 1700,
+    damage: 0.85,
+    count: 0,
+    radius: 270,
+  },
+  cataclysm: {
+    name: 'Wings of damnation',
+    reach: 500,
+    windupMs: 1200,
+    recoveryMs: 1900,
+    durationMs: 1600,
+    damage: 0.8,
+    count: 0,
+    radius: 55,
+  },
   strike: { reach: 50, windupMs: 350, recoveryMs: 180, damage: 1, count: 0, radius: 50 },
   bolt: { reach: 310, windupMs: 350, recoveryMs: 140, damage: 1, count: 1, radius: 0 },
   slam: { reach: 120, windupMs: 650, recoveryMs: 300, damage: 1, count: 0, radius: 120 },
@@ -92,64 +160,73 @@ export interface Encounter {
   ranged: readonly EnemyAttack[];
   boss: readonly EnemyAttack[];
 }
-export const ENCOUNTERS: Readonly<Record<MapId, Encounter>> = {
-  forest: {
-    cooldown: 0.9,
+const BIOME_ENCOUNTERS: Readonly<Record<BiomeId, Omit<Encounter, 'cooldown' | 'windup'>>> = {
+  desert: {
     tier: 1,
+    strafeSpeed: 0.7,
+    enrageCooldown: 0.8,
+    tactic:
+      'Dodge the snakes’ venom. The Sand Lion charges between expanding sand spirals: move through the gaps.',
+    melee: ['strike', 'charge'],
+    ranged: ['bolt', 'fan'],
+    boss: ['charge', 'sandstorm', 'charge', 'fan'],
+  },
+  forest: {
+    tier: 2,
     strafeSpeed: 0.45,
-    windup: 1.35,
     enrageCooldown: 0.9,
-    tactic: 'Follow the river trail. Dodge Elderroot’s root line, stomp and spread.',
+    tactic: 'Follow the river trail. Dodge the Forest Deer’s branching Wild Hunt and antler rush.',
     melee: ['strike'],
     ranged: ['bolt'],
-    boss: ['slam', 'roots', 'fan'],
+    boss: ['wildhunt', 'charge', 'roots', 'fan'],
   },
   castle: {
-    cooldown: 0.82,
-    tier: 2,
+    tier: 3,
     strafeSpeed: 0.6,
-    windup: 1.15,
     enrageCooldown: 0.82,
-    tactic: 'Break sight behind the ramparts. Knights rush; dodge behind the King’s royal cleave.',
+    tactic:
+      'Break sight behind the ramparts. Knights rush; dodge behind the Demoniac King’s rotating checkmate sectors.',
     melee: ['strike', 'charge'],
     ranged: ['bolt', 'burst', 'fan'],
-    boss: ['fan', 'royal', 'charge', 'slam'],
+    boss: ['checkmate', 'royal', 'charge', 'burst'],
   },
   paradise: {
-    cooldown: 0.74,
-    tier: 3,
+    tier: 5,
     strafeSpeed: 0.75,
-    windup: 1,
     enrageCooldown: 0.75,
-    tactic: 'Find gaps in the sun rings. Step inside the Seraph’s halo or escape its outer edge.',
+    tactic:
+      'Find gaps in the sun rings. Step inside the Fallen Angel’s halo, then escape the returning eclipse.',
     melee: ['strike', 'slam', 'charge'],
     ranged: ['fan', 'bolt', 'burst'],
-    boss: ['ring', 'halo', 'eruption', 'fan', 'burst'],
+    boss: ['eclipse', 'ring', 'charge', 'halo', 'fan'],
   },
   hell: {
-    cooldown: 0.66,
-    tier: 4,
+    tier: 6,
     strafeSpeed: 0.9,
-    windup: 0.9,
     enrageCooldown: 0.7,
-    tactic: 'Dodge bursts and charging fiends. Escape the Warden’s cross of hell fissures.',
+    tactic:
+      'Dodge bursts and charging fiends. Escape the Demon Gargoyle’s cascading wings of fire.',
     melee: ['charge', 'strike', 'slam'],
     ranged: ['burst', 'eruption', 'fan'],
-    boss: ['burst', 'fissure', 'eruption', 'charge', 'ring', 'fan'],
+    boss: ['cataclysm', 'charge', 'fissure', 'burst', 'ring'],
   },
   mountain: {
-    cooldown: 0.58,
-    tier: 5,
+    tier: 4,
     strafeSpeed: 1,
-    windup: 0.8,
     enrageCooldown: 0.65,
     tactic:
-      'Sidestep frost crosses. The Colossus marks an avalanche wall: dodge through before it falls.',
+      'Sidestep frost crosses. The Grizzly marks an expanding avalanche wall: dodge through before it falls.',
     melee: ['charge', 'strike', 'slam'],
     ranged: ['cross', 'burst', 'eruption', 'ring'],
-    boss: ['charge', 'avalanche', 'cross', 'eruption', 'ring', 'slam', 'burst', 'fan'],
+    boss: ['earthshatter', 'charge', 'avalanche', 'slam'],
   },
 };
+export const ENCOUNTERS: Readonly<Record<MapId, Encounter>> = mapCatalog((id) => ({
+  ...BIOME_ENCOUNTERS[biomeOf(id)],
+  windup: 1.25 - (BIOME_ENCOUNTERS[biomeOf(id)].tier - 1) * 0.065,
+  cooldown:
+    (1 - (BIOME_ENCOUNTERS[biomeOf(id)].tier - 1) * 0.065) * (1 - (stageOf(id) - 1) * 0.025),
+}));
 export function enemyAttack(value: string): EnemyAttack {
   return Object.hasOwn(ENEMY_ATTACKS, value) ? (value as EnemyAttack) : 'bolt';
 }
