@@ -1,8 +1,22 @@
 import type { EnemyRole, MapId } from './map.js';
 
 export type EnemyAttack =
-  'strike' | 'bolt' | 'slam' | 'fan' | 'ring' | 'burst' | 'charge' | 'eruption' | 'cross';
+  | 'strike'
+  | 'bolt'
+  | 'slam'
+  | 'fan'
+  | 'ring'
+  | 'burst'
+  | 'charge'
+  | 'eruption'
+  | 'cross'
+  | 'roots'
+  | 'royal'
+  | 'halo'
+  | 'fissure'
+  | 'avalanche';
 export interface AttackPattern {
+  name?: string;
   reach: number;
   windupMs: number;
   recoveryMs: number;
@@ -21,8 +35,54 @@ export const ENEMY_ATTACKS: Readonly<Record<EnemyAttack, AttackPattern>> = {
   charge: { reach: 270, windupMs: 650, recoveryMs: 650, damage: 1.1, count: 0, radius: 22 },
   eruption: { reach: 400, windupMs: 850, recoveryMs: 220, damage: 1.2, count: 0, radius: 76 },
   cross: { reach: 380, windupMs: 550, recoveryMs: 220, damage: 0.8, count: 8, radius: 0 },
+  roots: {
+    name: 'Root grasp',
+    reach: 380,
+    windupMs: 800,
+    recoveryMs: 260,
+    damage: 1,
+    count: 0,
+    radius: 42,
+  },
+  royal: {
+    name: 'Royal cleave',
+    reach: 205,
+    windupMs: 850,
+    recoveryMs: 380,
+    damage: 1.3,
+    count: 0,
+    radius: 205,
+  },
+  halo: {
+    name: 'Solar halo',
+    reach: 380,
+    windupMs: 1000,
+    recoveryMs: 300,
+    damage: 1.2,
+    count: 0,
+    radius: 210,
+  },
+  fissure: {
+    name: 'Hell fissure',
+    reach: 400,
+    windupMs: 1000,
+    recoveryMs: 280,
+    damage: 1.1,
+    count: 0,
+    radius: 48,
+  },
+  avalanche: {
+    name: 'Avalanche',
+    reach: 400,
+    windupMs: 1100,
+    recoveryMs: 320,
+    damage: 1.3,
+    count: 0,
+    radius: 56,
+  },
 };
 export interface Encounter {
+  cooldown: number;
   tier: number;
   windup: number;
   strafeSpeed: number;
@@ -34,55 +94,60 @@ export interface Encounter {
 }
 export const ENCOUNTERS: Readonly<Record<MapId, Encounter>> = {
   forest: {
+    cooldown: 0.9,
     tier: 1,
     strafeSpeed: 0.45,
     windup: 1.35,
     enrageCooldown: 0.9,
-    tactic: 'Follow the river trail. Elderroot teaches two slow attacks: a stomp and a spread.',
+    tactic: 'Follow the river trail. Dodge Elderroot’s root line, stomp and spread.',
     melee: ['strike'],
     ranged: ['bolt'],
-    boss: ['slam', 'fan'],
+    boss: ['slam', 'roots', 'fan'],
   },
   castle: {
+    cooldown: 0.82,
     tier: 2,
     strafeSpeed: 0.6,
     windup: 1.15,
     enrageCooldown: 0.82,
-    tactic:
-      'Break sight behind the ramparts. Knights rush; the King follows volleys with a charge.',
+    tactic: 'Break sight behind the ramparts. Knights rush; dodge behind the King’s royal cleave.',
     melee: ['strike', 'charge'],
-    ranged: ['bolt', 'burst'],
-    boss: ['fan', 'charge', 'slam'],
+    ranged: ['bolt', 'burst', 'fan'],
+    boss: ['fan', 'royal', 'charge', 'slam'],
   },
   paradise: {
+    cooldown: 0.74,
     tier: 3,
     strafeSpeed: 0.75,
     windup: 1,
     enrageCooldown: 0.75,
-    tactic: 'Find gaps in the sun rings. Leave marked ground before the light falls.',
-    melee: ['strike', 'strike', 'charge'],
+    tactic: 'Find gaps in the sun rings. Step inside the Seraph’s halo or escape its outer edge.',
+    melee: ['strike', 'slam', 'charge'],
     ranged: ['fan', 'bolt', 'burst'],
-    boss: ['ring', 'eruption', 'fan', 'burst'],
+    boss: ['ring', 'halo', 'eruption', 'fan', 'burst'],
   },
   hell: {
+    cooldown: 0.66,
     tier: 4,
     strafeSpeed: 0.9,
     windup: 0.9,
     enrageCooldown: 0.7,
-    tactic: 'Keep moving through staggered bursts, marked blasts and charging fiends.',
-    melee: ['charge', 'strike'],
+    tactic: 'Dodge bursts and charging fiends. Escape the Warden’s cross of hell fissures.',
+    melee: ['charge', 'strike', 'slam'],
     ranged: ['burst', 'eruption', 'fan'],
-    boss: ['burst', 'eruption', 'charge', 'ring', 'fan'],
+    boss: ['burst', 'fissure', 'eruption', 'charge', 'ring', 'fan'],
   },
   mountain: {
+    cooldown: 0.58,
     tier: 5,
     strafeSpeed: 1,
     windup: 0.8,
     enrageCooldown: 0.65,
-    tactic: 'Sidestep frost crosses. The Colossus chains rushes, avalanches and rings.',
+    tactic:
+      'Sidestep frost crosses. The Colossus marks an avalanche wall: dodge through before it falls.',
     melee: ['charge', 'strike', 'slam'],
-    ranged: ['cross', 'burst', 'eruption'],
-    boss: ['charge', 'cross', 'eruption', 'ring', 'slam', 'burst', 'fan'],
+    ranged: ['cross', 'burst', 'eruption', 'ring'],
+    boss: ['charge', 'avalanche', 'cross', 'eruption', 'ring', 'slam', 'burst', 'fan'],
   },
 };
 export function enemyAttack(value: string): EnemyAttack {

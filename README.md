@@ -1,6 +1,6 @@
 # OpenRPG — Five Realms
 
-An account-based cooperative and PvP combat prototype for up to three players in a desktop browser. Choose Forest, Castle, Paradise, Hell, or Mountain, move with WASD or arrow keys, aim with the mouse, and hold the left mouse button to charge and release to attack; right click activates your special. Each destination has its own layout and themed melee, ranged, and boss enemies. Testing offers unlimited respawns; Story unlocks each realm in order with one life per player. Fight opens every map for player-versus-player combat without monsters and with unlimited respawns. Permanent loot, class equipment, and packed health potions carry the first progression loop.
+An account-based cooperative and PvP combat prototype for up to three players in a desktop browser. Choose Forest, Castle, Paradise, Hell, or Mountain, move with WASD or arrow keys, aim with the mouse, and hold the left mouse button to charge and release to attack; right click activates your special and Q dodges. Each destination has its own layout and themed melee, ranged, and boss enemies. Testing offers unlimited respawns; Story unlocks each realm in order with one life per player. Fight opens every map for player-versus-player combat without monsters and with unlimited respawns. Permanent loot, class equipment, and packed health potions carry the first progression loop.
 
 ## Run locally
 
@@ -57,15 +57,15 @@ Choose a destination before creating a room. Joining a listed room or invite use
 
 | Difficulty | Realm and route | Enemies | Boss attacks |
 | --- | --- | --- | --- |
-| 1 | Forest — woodland forks around a moonwater pool | 5 | Elderroot: slow slam, fan (2 patterns) |
-| 2 | Castle — enclosed chambers with alternating north/south doorways | 7 | Hollow King: fan, charge, slam (3) |
-| 3 | Paradise — two garden loops around reflecting pools | 8 | Seraph: ring, ground blast, fan, burst (4) |
-| 4 | Hell — basalt islands joined by exposed bridges | 10 | Warden: burst, ground blast, charge, ring, fan (5) |
-| 5 | Mountain — three ledges with two long switchbacks | 12 | Colossus: charge, cross, ground blast, ring, slam, burst, fan (7) |
+| 1 | Forest — woodland forks around a moonwater pool | 5 | Elderroot: slow slam, root grasp, fan (3 patterns) |
+| 2 | Castle — enclosed chambers with alternating north/south doorways | 7 | Hollow King: fan, royal cleave, charge, slam (4) |
+| 3 | Paradise — two garden loops around reflecting pools | 8 | Seraph: ring, solar halo, ground blast, fan, burst (5) |
+| 4 | Hell — basalt islands joined by exposed bridges | 10 | Warden: burst, hell fissure, ground blast, charge, ring, fan (6) |
+| 5 | Mountain — three ledges with two long switchbacks | 12 | Colossus: charge, avalanche, cross, ground blast, ring, slam, burst, fan (8) |
 
 **Fight the boss whenever you reach it.** Bosses can attack and take damage even while ordinary enemies remain alive. Boss music starts on the first confirmed hit. Testing keeps unlimited enemy respawns.
 
-Every realm has melee, ranged and boss enemies. Melee attackers flank and pursue; ranged enemies retreat and strafe. Early enemies have slower movement, gentler damage and longer pauses. Boss health grows from 450 to 1440; movement from 100 to 180 px/s; the cooldown portion drops from 1800 to 600 ms. Later realms add rushing melee, staggered volleys, paired cross shots and marked ground blasts. Wind-ups become progressively shorter, with aim/target locked when shown. Below half health, enrage adds 4–20% movement speed and reduces cooldowns by 10–35%, depending on the realm; it never shortens a warning already shown. Charges stop at terrain and hit each player at most once.
+Every realm has melee, ranged and boss enemies. Melee attackers flank and pursue; ranged enemies retreat and strafe. Early enemies have slower movement, gentler damage and longer pauses. Boss health grows from 450 to 1440; movement from 100 to 180 px/s; the cooldown portion drops from 1620 to 348 ms. Later realms add rushing melee, staggered volleys, paired cross shots and marked ground blasts. Wind-ups become progressively shorter, with aim/target locked when shown. Below half health, enrage adds 4–20% movement speed and reduces cooldowns by 10–35%, depending on the realm; it never shortens a warning already shown. Charges stop at terrain and hit each player at most once.
 
 Testing enemies return after eight seconds and players after three seconds with brief protection. Story has no player or enemy respawns. Fight remains player-only. Enemies patrol when idle and return home when pulled too far; camp remains a refuge.
 
@@ -98,13 +98,17 @@ Content, equipment modifiers, drop rules and trading contracts live in `shared/s
 
 | Class | Hold left, then release | Right click / hold |
 | --- | --- | --- |
-| Archer | Arrow: 10–44 damage, 1 s charge cycle; no cooldown | Arrow storm: 12 arrows evenly across 360°, 25 damage each, 7 s cooldown |
-| Mage | Fireball: 22–96 damage, 2 s charge cycle; no cooldown | Inferno: larger, slower fireball, 300 damage, 10 s cooldown |
-| Warrior | Sword sweep: 10–42 damage, 82-unit reach / 140° sector, 0.7 s charge cycle; no cooldown | Iron will: no damage taken for 4 s, 12 s cooldown from activation |
+| Archer | Arrow: 1–44 damage, 1 s charge cycle; no cooldown | Arrow storm: 12 arrows evenly across 360°, 25 damage each, 7 s cooldown |
+| Mage | Fireball: 1–96 damage, 2 s charge cycle; no cooldown | Inferno: larger, slower fireball, 300 damage, 10 s cooldown |
+| Warrior | Sword sweep: 1–42 damage, 100-unit reach / 140° sector, 0.7 s charge cycle; no cooldown | Iron will: no damage taken for 4 s, 12 s cooldown from activation |
 
-Hold left to fill the ring around your character, then release to attack in the current aim direction. Its gold window (65–80% of the cycle) gives maximum damage: **0.65–0.8 s for Archer, 1.3–1.6 s for Mage, 0.455–0.56 s for Warrior** before equipment modifiers. Damage rises from 40% of base to 175%, then falls back to 40% at a full ring. Holding longer stays overcharged: it never auto-fires or cycles back to maximum. Quick taps produce weak attacks. Damage rounds once after equipment bonuses.
+Warrior walks fastest (210 units/s), Archer sits in the middle (180), and Mage is slowest (150). **Q dodges toward the mouse cursor**, even while moving in another direction: Warrior 90 units / 2.5 s cooldown, Archer 120 / 4 s, Mage 160 / 6 s. Dashes last 150–200 ms, stop at terrain, and grant no immunity. Press again for another dodge; holding Q does not repeat. The Q HUD slot shows readiness. Dash contact pushes normal mobs 34 units and stuns them for 1 second, once per dash without extra damage. Q never pushes or stuns bosses. See [combat rules](docs/gameplay.md) for boss-exclusive attacks and difficulty scaling.
+
+Hold left to fill the ring around your character, then release to attack in the current aim direction. Its gold window (65–80% of the cycle) gives maximum damage: **0.65–0.8 s for Archer, 1.3–1.6 s for Mage, 0.455–0.56 s for Warrior** before equipment modifiers. Damage rises sharply from 2.5% of base to 175% near the gold window, then drops again. The ring keeps spinning: each revolution offers another perfect window, without auto-firing. Quick taps deal about 1 damage before equipment; well-timed releases deal 42–96 depending on class. One quiet, steady charging tone stays the same across classes and repeated cycles. Confirmed perfect releases add an impact/chime; very weak releases add a short falling dud cue for the shooter. Damage rounds once after equipment bonuses.
 
 Normal attacks have no cooldown: release, then press again to begin a fresh charge immediately. The charge ring and sweet spot determine damage. Held right click repeats a special when its cooldown expires. All classes can move while charging and releasing. The warrior hits each enemy overlapping its forward sector once, including edge grazes, with terrain line of sight required. Its sector is larger than the melee mob's 50-unit / 120° attack. Arrows and fireballs stop at their first impact; no splash damage or piercing. Projectiles sweep against square actor footprints (arrow/bolt radius 3, fireball 7, Inferno 14); the sword checks circular enemy footprints against a sector. Hitboxes remain independent of skins.
+
+Walking into a living mob stuns **the player for 1 second**; touching a boss while walking or dashing stuns **the player for 2 seconds**. Contact pushes the player 120 units away from the enemy (limited by terrain), cancels charge and dash, and prevents movement, attacks and potion use until it expires. After recovery, the player has 1.5 seconds of stun immunity against all enemies. Leave a contact before it can stun again. Damage protection, including Iron will, does not prevent contact stuns. Gold sparks, a “Stunned” ability label and a short impact/ringing sound mark player stuns. Perfect primary hits (including sword sweeps) roll a 20% chance to stun normal mobs for 1.5 seconds, or 7% to stun bosses for 0.7 seconds. Ordinary shots and specials never stun; shots never push enemies. Successful stuns cancel enemy wind-ups and continuations; already-fired projectiles remain live. These contact rules do not apply in Fight.
 
 The local charge ring responds immediately; the server uses its own simulation time for damage, cooldowns and attack creation. Player specials retain their existing balance. Shared tuning is in `shared/src/combat/combat.ts`. Blur, leaving the canvas, death, disconnection, or 500 ms without input cancels a charge without firing. Reconnects and respawns preserve special cooldowns; respawns clear old immunity and sweep effects.
 
@@ -171,7 +175,7 @@ Only `DATABASE_URL` and `APP_ORIGIN` are required deployment variables. `TRUST_P
 ## Playing
 
 - In the village: WASD / arrows to walk, E to interact, Escape to close a dialog.
-- In an expedition: WASD / arrow keys: move. Mouse: aim. Hold left / release: charge / normal attack. Right click / hold: class special.
+- In an expedition: WASD / arrow keys: move. Mouse: aim. Hold left / release: charge / normal attack. Right click / hold: class special. Q: directional dodge.
 - Trees, stone walls, and map edges stop movement and shots. Players never block each other. Testing and Story disable friendly fire; in Fight, attacks damage other players but never their owner.
 - Testing: players return after three seconds; enemies after eight seconds. Story: one life per player and enemy, including the boss; no respawns.
 - Fight: all five maps, up to three rival players, no monsters, unlimited three-second respawns with brief protection. Class attacks, gear, potions and cooldowns work as usual. Kills count for the current room only; no loot or story progress is awarded. Packed potions are spent on entry, as in other modes.
@@ -183,7 +187,7 @@ Only `DATABASE_URL` and `APP_ORIGIN` are required deployment variables. `TRUST_P
 
 The brass **Audio on/off** button at the top left of both screens controls music and effects; its preference is saved in this browser. Audio starts on page load when the browser permits autoplay, otherwise on the first click, tap or keypress anywhere on the page. It pauses when the page loses focus, and resumes when you return (some mobile browsers may require another tap). Unsupported browsers continue silently.
 
-Original synthesized menu/adventure melodies accompany clicks, major actions, three class attacks and specials, charging and its sweet spot, player/monster damage, enemy attacks, deaths, respawning, potion use, loot and Story results. Nearby combat fades with distance. Charging follows the immediate local ring; attacks, damage and pickups follow confirmed server state. No audio files, external samples, dependencies or extra server messages are needed.
+Original synthesized menu/adventure melodies accompany clicks, major actions, three class attacks and specials, steady charging, perfect and bad releases, player/monster damage, enemy attacks, deaths, respawning, potion use, loot and Story results. Nearby combat fades with distance. Charging follows the immediate local ring; attacks, damage and pickups follow confirmed server state. No audio files, external samples, dependencies or extra server messages are needed.
 
 `client/src/audio/music.ts` holds three original scores: a gentle G-major menu theme in 6/8 with flute-like melody and plucked accompaniment, and a D-minor adventure theme in 4/4 with lower strings and soft drums. Those themes loop in roughly 32–35 seconds. A faster, eight-bar D-minor boss march begins on the first confirmed boss hit, including hits by a teammate. Boss death, player death, retreating out of range or a reset returns to the adventure theme; mute and reconnect retain the authoritative encounter state. `sounds.ts` holds typed effect recipes; `synth.ts` renders tones/noise; `audio.ts` manages playback, charging, music and mute; `audio-ui.ts` wires accessible buttons; `game-audio.ts` compares authoritative snapshots without replaying old sounds on reconnect. To add a cue, add its recipe and call `audio.play()` from the relevant presentation event. Web Audio is independent of Phaser's disabled sound manager, so the menu and adventure share one context.
 
@@ -197,7 +201,7 @@ Start with the [developer documentation index](docs/README.md) for architecture,
 
 `client/` owns the account UI, class selection, shared Phaser village, station dialogs and expedition rendering, generated pixel art, input sampling, local prediction, and remote interpolation. Colyseus prediction acknowledges inputs and replays pending movement against authoritative state. Local terrain collisions use the shared movement function. Remote entities use a 100 ms interpolation buffer; respawns snap. Projectiles and damage remain authoritative. Development diagnostics expose latency and reconciliation drift. Add `?debug=1` to enable the Colyseus SDK panel.
 
-Inputs carry movement, aim, normal-attack and special-attack intent, never positions or hit results. Server processing is bounded to one input per player per fixed step with bounded queues. Swept collision detects projectile impacts between steps. Reconciliation performs movement only, avoiding repeated presentation effects.
+Inputs carry movement, aim, normal-attack, special-attack and dodge intent, never positions or hit results. Server processing is bounded to one input per player per fixed step with bounded queues. Swept collision detects projectile impacts between steps. Reconciliation performs movement only, avoiding repeated presentation effects.
 
 ## Verification and limitations
 

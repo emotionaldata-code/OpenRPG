@@ -22,6 +22,7 @@ test('audio: authoritative attacks sound once per confirmed attack, for every cl
   const f = fixture();
   for (const kind of ['archer', 'mage', 'warrior']) {
     f.player.characterClass = kind;
+    f.player.lastAttackMultiplier = 0.5;
     f.player.chargeStartedAt = f.state.elapsed;
     f.patch();
     assert.equal(f.heard.length, 0);
@@ -166,4 +167,80 @@ test('audio: boss score follows confirmed engagement across mute/reconnect and r
   boss.engaged = true;
   state.outcome = 'complete';
   assert.equal(mode(), 'adventure');
+});
+
+test('audio: perfect release accent follows confirmed quality, once, without reconnect replay', () => {
+  const f = fixture();
+  f.player.lastAttackAt = f.state.elapsed;
+  f.player.lastAttackMultiplier = 1.75;
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['archer-shot', 'perfect'],
+  );
+  f.heard.length = 0;
+  f.patch();
+  f.patch(false);
+  f.patch();
+  assert.equal(f.heard.length, 0);
+  f.player.lastAttackAt = f.state.elapsed;
+  f.player.lastAttackMultiplier = 0.025;
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['archer-shot', 'bad-shot'],
+  );
+  assert.ok(f.heard[0]!.volume < 0.4, 'weak shots have a lighter sound');
+});
+
+test('audio: ordinary releases and other players do not emit the bad-shot cue', () => {
+  const f = fixture();
+  f.player.lastAttackMultiplier = 0.5;
+  f.player.lastAttackAt = f.state.elapsed;
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['archer-shot'],
+  );
+  f.heard.length = 0;
+  f.state.players.set('ally', new Player({ name: 'Ally', x: 150, y: 100, protectedUntil: 0 }));
+  f.patch();
+  f.state.players.get('ally')!.lastAttackAt = f.state.elapsed;
+  f.state.players.get('ally')!.lastAttackMultiplier = 0.025;
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['archer-shot'],
+  );
+});
+
+test('audio: local stun sounds once, without replay on recovery, reconnect or respawn', () => {
+  const f = fixture();
+  f.player.stunnedUntil = f.state.elapsed + 1000;
+  f.patch();
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['stun'],
+  );
+  f.heard.length = 0;
+  f.patch(false);
+  f.patch();
+  f.state.elapsed = f.player.stunnedUntil;
+  f.patch();
+  assert.equal(f.heard.length, 0);
+  f.player.generation++;
+  f.player.stunnedUntil = 0;
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['respawn'],
+  );
+  f.heard.length = 0;
+  f.player.stunnedUntil = f.state.elapsed + 2000;
+  f.patch();
+  assert.deepEqual(
+    f.heard.map((event) => event.sound),
+    ['stun'],
+  );
 });

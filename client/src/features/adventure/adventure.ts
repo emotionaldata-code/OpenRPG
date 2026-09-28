@@ -1,6 +1,7 @@
 import { request } from '../../api/http';
 import {
   ITEMS,
+  classMovement,
   POTIONS,
   ownedQuantity,
   emptyLoadout,
@@ -113,6 +114,9 @@ export class AdventurePanel {
       this.loadout.potions >= Math.min(POTIONS.maxCarry, this.profile?.potions ?? 0);
   }
   private render(): void {
+    const { speed, dash } = classMovement(this.kind);
+    element('class-mobility').textContent =
+      `${this.kind}: ${speed} speed · Q ${dash.name}: ${dash.distance} distance / ${dash.cooldownMs / 1000}s cooldown.`;
     for (const slot of ['weapon', 'armor'] as const) {
       const root = element(`loadout-${slot}`);
       root.replaceChildren();

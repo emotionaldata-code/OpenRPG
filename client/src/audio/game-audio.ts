@@ -1,4 +1,10 @@
-import type { WorldState, Player, Mob, CharacterClass } from '@openrpg/shared';
+import {
+  CHARGE,
+  type WorldState,
+  type Player,
+  type Mob,
+  type CharacterClass,
+} from '@openrpg/shared';
 import type { Music } from './music.js';
 import type { Sound } from './sounds.js';
 interface PlayerSound {
@@ -6,8 +12,10 @@ interface PlayerSound {
   generation: number;
   lastAttackAt: number;
   nextSpecialAt: number;
+  nextDashAt: number;
   nextPotionAt: number;
   lootAt: number;
+  stunnedUntil: number;
 }
 interface MobSound {
   hp: number;
@@ -22,8 +30,10 @@ const playerSnapshot = (p: Player): PlayerSound => ({
   generation: p.generation,
   lastAttackAt: p.lastAttackAt,
   nextSpecialAt: p.nextSpecialAt,
+  nextDashAt: p.nextDashAt,
   nextPotionAt: p.nextPotionAt,
   lootAt: p.lootAt,
+  stunnedUntil: p.stunnedUntil,
 });
 const mobSnapshot = (m: Mob): MobSound => ({
   hp: m.hp,
@@ -78,6 +88,9 @@ export class CombatAudio {
             this.play('respawn');
           }
         } else {
+          if (mine && p.stunnedUntil > old.stunnedUntil && p.stunnedUntil > state.elapsed) {
+            this.play('stun');
+          }
           if (mine && p.hp < old.hp) {
             this.play(p.hp <= 0 ? 'death' : 'hurt');
           }
@@ -85,10 +98,21 @@ export class CombatAudio {
             this.play(p.hp <= 0 ? 'death' : 'hurt', gain);
           }
           if (p.lastAttackAt > old.lastAttackAt) {
-            this.play(`${soundClass(p.characterClass)}-shot`, gain);
+            this.play(
+              `${soundClass(p.characterClass)}-shot`,
+              gain * (0.35 + (0.65 * p.lastAttackMultiplier) / CHARGE.maxDamage),
+            );
+            if (p.lastAttackMultiplier >= CHARGE.maxDamage) {
+              this.play('perfect', gain);
+            } else if (mine && p.lastAttackMultiplier <= CHARGE.maxDamage * 0.1) {
+              this.play('bad-shot');
+            }
           }
           if (p.nextSpecialAt > old.nextSpecialAt) {
             this.play(`${soundClass(p.characterClass)}-special`, gain);
+          }
+          if (p.nextDashAt > old.nextDashAt) {
+            this.play('dash', gain);
           }
           if (mine && p.nextPotionAt > old.nextPotionAt) {
             this.play('potion');

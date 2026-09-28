@@ -3,6 +3,7 @@ import {
   ENEMY_THEMES,
   getMap,
   enemyRules,
+  attackPattern,
   type Player,
   type WorldState,
 } from '@openrpg/shared';
@@ -75,6 +76,10 @@ function combatStatus(player: Player, state: WorldState): string {
       status = `${boss.hp}/${enemyRules('boss', getMap(state.mapId).id).health} HP${boss.enraged ? ' · ENRAGED' : ''}`;
     }
     message += ` · ${ENEMY_THEMES[getMap(state.mapId).id].names.boss}: ${status}`;
+    const special = attackPattern(boss.attackKind, boss.role, getMap(state.mapId).id).name;
+    if (boss.hp > 0 && boss.attackAt > 0 && special) {
+      message += ` · ${special}`;
+    }
   }
   return message;
 }

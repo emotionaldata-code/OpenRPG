@@ -16,17 +16,19 @@
 
 ## Input to frame
 
-1. Controls produce movement, aim and held attack intent. Mouse aim uses world coordinates relative to the camera. The client never sends authoritative positions, damage or hit results.
+1. Controls produce movement, aim, held attack intent and one-shot Q dodge intent. Mouse aim uses world coordinates relative to the camera. The client never sends authoritative positions, damage or hit results.
 2. Colyseus prediction schedules 30 Hz inputs. The server sanitizes values and consumes at most one queued input per connected player per tick; extra messages cannot grant extra movement or attacks.
 3. Movement calls the same deterministic function and selected terrain on both sides. Server world timers, AI and combat advance once per step. A missing input does not move that player.
-4. Authoritative state is patched every 50 ms with input acknowledgments. The local reconciler corrects movement and replays pending inputs. It tracks `x`, `y`, `aim`, `hp`, `connected`; it never replays damage, sound, loot or database writes.
+4. Authoritative state is patched every 50 ms with input acknowledgments. The local reconciler corrects movement and replays pending inputs. Expedition prediction uses `predict.sim`: a plain `movementState` snapshot carries position, class, life/connection state, movement clock, dash state and the player stun deadline. Only `x`/`y` form its render pose, keeping timers out of smoothing and pixel drift. It never replays damage, sound, loot or database writes.
 5. Other players, mobs and projectiles render with a 100 ms interpolation buffer. Local aiming/charge feedback is immediate; projectile creation and damage wait for server confirmation.
 
 The input queue retains at most eight commands; overflow acknowledges discarded commands rather than simulating a burst. The 120-message/second cap disconnects flooding clients. Keep these bounds when adding input types.
 
 ## Lifetime and recovery
 
-`onDrop` marks the player disconnected, cancels charge and permits 15 seconds of SDK recovery. `onReconnect` revalidates the session and restores the existing player; it must not recreate the loadout or spend potions. `onLeave` owns final player cleanup. Room timers handle expiry; logout/deletion revokes seats in this process.
+Admission reserves a player with `ready = false` and `connected = false`. The scene builds and renders behind the loading screen, then its dismissal sends a one-time `ready` message. Until then, the player is hidden, input is discarded, and existing connection guards exclude movement, attacks, damage and loot. Activation starts spawn protection; repeated readiness messages cannot extend it. Loading seats do not count toward Story outcomes or completion rewards. Reconnecting before readiness keeps the player inactive.
+
+`onDrop` marks the player disconnected, cancels charge/remaining dash travel and permits 15 seconds of SDK recovery. `onReconnect` revalidates the session and restores the existing player; it must not recreate the loadout or spend potions. `onLeave` owns final player cleanup. Room timers handle expiry; logout/deletion revokes seats in this process.
 
 The client stops input while disconnected, clears held controls on blur and resets prediction on recovery. Death/respawn signatures reset interpolation, so a new life snaps instead of sliding across the map. Keep the explicit browser-offline handler: multiple SDK connections can otherwise interfere during offline handling.
 

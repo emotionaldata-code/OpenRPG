@@ -4,6 +4,7 @@ import {
   Mob,
   enemyRules,
   attackPattern,
+  classMovement,
   moveBody,
   terrainHit,
   type WorldState,
@@ -86,6 +87,7 @@ export class Enemies {
             lastAttackAt: -1000,
             enraged: false,
             engaged: false,
+            stunnedUntil: 0,
           });
           Object.assign(brain, {
             nextAttack: now + rules.cooldownMs,
@@ -98,6 +100,9 @@ export class Enemies {
         continue;
       }
       mob.enraged = mob.role === 'boss' && mob.hp <= rules.health / 2;
+      if (now < mob.stunnedUntil) {
+        continue;
+      }
       if (Math.hypot(mob.x - brain.home.x, mob.y - brain.home.y) > ENEMY_AI.leash) {
         brain.returning = true;
       }
@@ -220,7 +225,10 @@ export class Enemies {
       if (previous && dt > 0) {
         const dx = (p.x - previous.x) / dt,
           dy = (p.y - previous.y) / dt;
-        const scale = Math.min(1, 180 / Math.max(1, Math.hypot(dx, dy)));
+        const scale = Math.min(
+          1,
+          classMovement(p.characterClass).speed / Math.max(1, Math.hypot(dx, dy)),
+        );
         this.velocity.set(p.name, { x: dx * scale, y: dy * scale });
       }
       next.set(p.name, { x: p.x, y: p.y });

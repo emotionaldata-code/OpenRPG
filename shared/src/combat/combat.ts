@@ -39,7 +39,7 @@ export const PROJECTILES: Record<ProjectileKind, ProjectileRules> = {
 };
 export const COMBAT = {
   volleyCount: 12,
-  swordReach: 82,
+  swordReach: 100,
   swordHalfAngle: (Math.PI * 7) / 18,
   swordDamage: 24,
   sweepMs: 240,
@@ -49,19 +49,20 @@ export function classCombat(kind: string): ClassCombat {
   return CLASS_COMBAT[kind === 'mage' || kind === 'warrior' ? kind : 'archer'];
 }
 
-/** A single charge fills once: holding beyond the gold window stays weak. */
+/** Each revolution has the same timing window; missed windows can be tried again. */
 export const CHARGE = {
   sweetStart: 0.65,
   sweetEnd: 0.8,
-  minDamage: 0.4,
+  minDamage: 0.025,
   maxDamage: 1.75,
+  curvePower: 4,
   inputTimeoutMs: 500,
 } as const;
 export interface ChargeState {
   chargeStartedAt: number;
 }
 export function chargeProgress(heldMs: number, durationMs: number): number {
-  return Math.max(0, Math.min(1, heldMs / durationMs));
+  return (Math.max(0, heldMs) % durationMs) / durationMs;
 }
 export function chargeMultiplier(progress: number): number {
   const p = Math.max(0, Math.min(1, progress));
@@ -71,8 +72,19 @@ export function chargeMultiplier(progress: number): number {
       : p <= CHARGE.sweetEnd
         ? 1
         : (1 - p) / (1 - CHARGE.sweetEnd);
-  return CHARGE.minDamage + quality * (CHARGE.maxDamage - CHARGE.minDamage);
+  return CHARGE.minDamage + quality ** CHARGE.curvePower * (CHARGE.maxDamage - CHARGE.minDamage);
 }
+
+export const CONTACT = {
+  playerStunMs: { mob: 1000, boss: 2000 },
+  playerPush: 120,
+  recoveryMs: 1500,
+  dash: { stunMs: 1000, push: 34 },
+} as const;
+export const PERFECT_STUN = {
+  mob: { chance: 0.2, durationMs: 1500 },
+  boss: { chance: 0.07, durationMs: 700 },
+} as const;
 /** Shared timing only; the server alone creates attacks and applies this damage. */
 export function updateCharge(
   state: ChargeState,

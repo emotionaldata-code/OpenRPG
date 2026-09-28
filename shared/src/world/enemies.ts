@@ -90,6 +90,6 @@ export function enemyRules(value: string, mapId: MapId = 'forest'): EnemyRules {
     health: Math.round(base.health * (1 + level * (value === 'boss' ? 0.55 : 0.2))),
     damage: Math.round(base.damage * (1 + level * 0.28)),
     speed: base.speed + level * 20,
-    cooldownMs: base.cooldownMs - level * 300,
+    cooldownMs: Math.round((base.cooldownMs - level * 300) * ENCOUNTERS[mapId].cooldown),
   };
 }

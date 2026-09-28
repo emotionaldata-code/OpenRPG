@@ -7,7 +7,7 @@ import {
   type GameMap,
   type Mob,
   type Loadout,
-  movePlayer,
+  moveFighter,
   type Intent,
   type CharacterClass,
 } from '@openrpg/shared';
@@ -40,6 +40,8 @@ export class Simulation {
       new Player({
         name,
         characterClass,
+        ready: true,
+        movementAt: this.state.elapsed,
         ...loadout,
         ...spawn,
         protectedUntil: this.state.elapsed + RULES.protectionMs,
@@ -69,6 +71,8 @@ export class Simulation {
           protectedUntil: this.state.elapsed + RULES.protectionMs,
           generation: player.generation + 1,
           invulnerableUntil: 0,
+          stunnedUntil: 0,
+          dashRemaining: 0,
           sweepAt: -1000,
           chargeStartedAt: -1,
         });
@@ -76,8 +80,12 @@ export class Simulation {
     }
     this.enemies?.step(dt);
     this.combat.step(dt);
-    if (this.state.mode === 'story' && this.state.players.size > 0) {
-      if ([...this.state.players.values()].every((p) => p.hp <= 0)) {
+    if (this.state.mode === 'story') {
+      const participants = [...this.state.players.values()].filter((p) => p.ready);
+      if (participants.length === 0) {
+        return;
+      }
+      if (participants.every((p) => p.hp <= 0)) {
         this.state.outcome = 'failed';
       } else if ([...this.state.mobs.values()].every((m) => m.hp <= 0)) {
         this.state.outcome = 'complete';
@@ -98,6 +106,7 @@ export class Simulation {
       player.hp <= 0 ||
       player.hp >= RULES.playerHealth ||
       player.potions <= 0 ||
+      this.state.elapsed < player.stunnedUntil ||
       this.state.elapsed < player.nextPotionAt
     ) {
       return;
@@ -111,8 +120,14 @@ export class Simulation {
     if (this.state.outcome === 'failed' || !player || !player.connected || player.hp <= 0) {
       return;
     }
-    movePlayer(player, input, dt, this.map.obstacles);
+    // Replays advance this same clock from the last acknowledged movement snapshot.
+    player.movementAt = this.state.elapsed;
+    const from = { x: player.x, y: player.y },
+      dashing = player.dashRemaining > 0,
+      previousDash = player.nextDashAt;
+    moveFighter(player, input, dt, this.map.obstacles);
     if (this.state.outcome === 'active') {
+      this.combat.contact.move(id, player, from, dashing || player.nextDashAt !== previousDash);
       this.combat.attack(id, player, input);
     }
   }

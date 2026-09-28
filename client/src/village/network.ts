@@ -32,7 +32,7 @@ export class VillageNetwork {
     const self = this.room.state.players.get(this.room.sessionId);
     if (self && !this.local) {
       this.local = this.predict.reconciler(self, {
-        fields: ['x', 'y', 'aim', 'connected', 'activity'],
+        fields: ['x', 'y', 'aim', 'connected', 'activity', 'characterClass'],
         input: this.input,
         step: (ctx, player, command) => {
           if (!player.activity) {

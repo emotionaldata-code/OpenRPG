@@ -7,6 +7,7 @@ import {
   attackPattern,
   attackAngles,
   enemyRole,
+  bossAttackAreas,
 } from '@openrpg/shared';
 import type { GameNetwork } from '../network';
 
@@ -33,9 +34,7 @@ export class CombatView {
         }
         this.shots.set(id, image);
       }
-      image
-        .setPosition(this.net.predict.value(p, 'x'), this.net.predict.value(p, 'y'))
-        .setRotation(p.angle);
+      image.setPosition(this.net.position(p, 'x'), this.net.position(p, 'y')).setRotation(p.angle);
       if (p.kind === 'fireball' || p.kind === 'inferno') {
         image.setAlpha(0.88 + Math.sin(this.scene.time.now / 45) * 0.12);
       }
@@ -49,6 +48,10 @@ export class CombatView {
     const g = this.effects.clear();
     for (const mob of state.mobs.values()) {
       if (mob.hp <= 0) {
+        continue;
+      }
+      if (mob.stunnedUntil > now) {
+        this.stun(this.net.position(mob, 'x'), this.net.position(mob, 'y') - 64, now);
         continue;
       }
       const winding = mob.attackAt > 0,
@@ -73,7 +76,37 @@ export class CombatView {
       const alpha = winding ? 0.12 + progress * 0.2 : (1 - flash / 250) * 0.55;
       const color = mob.enraged ? 0xff805e : winding ? 0xf0a75e : 0xffddb0;
       g.fillStyle(color, alpha).lineStyle(2, color, 0.8);
-      if (mob.attackKind === 'eruption') {
+      const areas = bossAttackAreas(
+        mob.attackKind,
+        { x, y },
+        { x: mob.targetX, y: mob.targetY },
+        mob.attackAngle,
+        pattern.radius,
+      );
+      if (areas.length) {
+        for (const area of areas) {
+          if (area.innerRadius > 0) {
+            g.lineStyle(area.radius - area.innerRadius, color, alpha).strokeCircle(
+              area.x,
+              area.y,
+              (area.radius + area.innerRadius) / 2,
+            );
+            g.lineStyle(2, color, 0.8)
+              .strokeCircle(area.x, area.y, area.innerRadius)
+              .strokeCircle(area.x, area.y, area.radius);
+          } else {
+            g.slice(
+              area.x,
+              area.y,
+              area.radius,
+              area.angle - area.halfAngle,
+              area.angle + area.halfAngle,
+            )
+              .fillPath()
+              .strokePath();
+          }
+        }
+      } else if (mob.attackKind === 'eruption') {
         g.fillCircle(mob.targetX, mob.targetY, pattern.radius).strokeCircle(
           mob.targetX,
           mob.targetY,
@@ -134,6 +167,21 @@ export class CombatView {
       if (p.hp <= 0) {
         continue;
       }
+      if (p.stunnedUntil > now) {
+        this.stun(this.net.position(p, 'x'), this.net.position(p, 'y') - 64, now);
+      }
+      const movement = this.net.movement(p);
+      if (movement.dashRemaining > 0) {
+        const x = this.net.position(p, 'x'),
+          y = this.net.position(p, 'y');
+        const angle = movement.dashAngle;
+        g.lineStyle(7, 0xb8e5f0, 0.45).lineBetween(
+          x,
+          y,
+          x - Math.cos(angle) * 32,
+          y - Math.sin(angle) * 32,
+        );
+      }
       const age = now - p.sweepAt;
       if (age >= 0 && age < COMBAT.sweepMs) {
         const progress = age / COMBAT.sweepMs,
@@ -170,8 +218,8 @@ export class CombatView {
         );
       }
       if (p.invulnerableUntil > now) {
-        const x = this.net.predict.value(p, 'x'),
-          y = this.net.predict.value(p, 'y');
+        const x = this.net.position(p, 'x'),
+          y = this.net.position(p, 'y');
         const pulse = 0.65 + Math.sin(this.scene.time.now / 120) * 0.2;
         g.fillStyle(0xe1c279, 0.1).fillCircle(x, y, 27);
         g.lineStyle(2, 0xf2dca2, pulse).strokeCircle(x, y, 27);
@@ -187,6 +235,14 @@ export class CombatView {
           )
           .strokePath();
       }
+    }
+  }
+  private stun(x: number, y: number, now: number): void {
+    const g = this.effects;
+    g.lineStyle(1, 0xffdf85, 0.7).strokeEllipse(x, y, 30, 10);
+    for (let i = 0; i < 3; i++) {
+      const angle = now / 220 + (i * Math.PI * 2) / 3;
+      g.fillStyle(0xffdf85).fillCircle(x + Math.cos(angle) * 15, y + Math.sin(angle) * 5, 3);
     }
   }
 }

@@ -133,18 +133,19 @@ test('all class weapons increase actual damage and armor affects server deadline
     state.mobs.set('mob', mob);
     const combat = new Combat(state);
     combat.attack('hero', player, attack);
+    state.elapsed = equippedCombat(player).primary.chargeMs * 0.7;
     combat.attack('hero', player, { ...attack, fire: false });
     combat.step(0.2);
-    assert.equal(mob.hp, 1000 - (kind === 'archer' ? 12 : kind === 'mage' ? 26 : 12));
-    assert.equal(player.lastAttackAt, 0);
+    assert.equal(mob.hp, 1000 - (kind === 'archer' ? 53 : kind === 'mage' ? 116 : 50));
+    assert.equal(player.lastAttackAt, state.elapsed);
     assert.equal(
       equippedCombat(player).primary.chargeMs,
       kind === 'archer' ? 850 : kind === 'mage' ? 1700 : 700,
     );
     combat.attack('hero', player, { ...attack, fire: false, special: true });
-    assert.equal(player.nextSpecialAt, equippedCombat(player).special.cooldownMs);
+    assert.equal(player.nextSpecialAt, state.elapsed + equippedCombat(player).special.cooldownMs);
     if (kind === 'warrior') {
-      assert.equal(player.invulnerableUntil, 5000);
+      assert.equal(player.invulnerableUntil, state.elapsed + 5000);
     }
   }
   assert.equal(
@@ -169,6 +170,7 @@ test('each lethal hit generates one reward event and loot matches the recipient 
     deaths++;
   });
   combat.attack('hero', player, attack);
+  state.elapsed = 490;
   combat.attack('hero', player, { ...attack, fire: false });
   state.elapsed += 700;
   combat.attack('hero', player, attack);

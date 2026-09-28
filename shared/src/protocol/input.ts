@@ -11,6 +11,7 @@ export interface Intent {
   aim: number;
   fire: boolean;
   special: boolean;
+  dash?: boolean;
   cancelFire?: boolean;
 }
 export interface JoinOptions {
@@ -30,6 +31,7 @@ export const MoveInput = schema(
     aim: t.float64().default(0),
     fire: t.boolean().default(false),
     special: t.boolean().default(false),
+    dash: t.boolean().default(false),
     cancelFire: t.boolean().default(false),
   },
   'MoveInput',
@@ -41,6 +43,9 @@ export function sanitizeInput(input: Intent): void {
   input.aim = Number.isFinite(input.aim) ? Math.atan2(Math.sin(input.aim), Math.cos(input.aim)) : 0;
   input.fire = input.fire === true;
   input.special = input.special === true;
+  if (input.dash !== undefined) {
+    input.dash = input.dash === true;
+  }
   if (input.cancelFire !== undefined) {
     input.cancelFire = input.cancelFire === true;
   }

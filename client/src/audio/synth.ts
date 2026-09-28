@@ -1,6 +1,5 @@
 import type { Tone } from './sounds';
 export interface Voice {
-  pitch(hz: number): void;
   stop(): void;
 }
 
@@ -79,7 +78,6 @@ export class Synth {
       this.voices.delete(voice);
     };
     const voice: Voice = {
-      pitch: (hz) => frequency.setTargetAtTime(hz, ctx.currentTime, 0.025),
       stop: () => {
         if (stopped) {
           return;

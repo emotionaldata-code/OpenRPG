@@ -4,11 +4,14 @@ import {
   CloseCode,
   type Room,
   type InputHandle,
-  type Reconciler,
+  type SimReconciler,
 } from '@colyseus/sdk';
 import {
   MoveInput,
-  movePlayer,
+  moveFighter,
+  movementState,
+  type FighterMovement,
+  type Point,
   RULES,
   getMap,
   type GameMap,
@@ -27,9 +30,16 @@ export class GameNetwork {
   readonly map: GameMap;
   readonly predict: Predict<WorldState>;
   readonly input: InputHandle<MoveInput>;
-  private local?: Reconciler<Player, Intent>;
+  private local?: SimReconciler<Intent, { x: number; y: number }, FighterMovement>;
   private generations = new Map<object, string>();
   connected = true;
+  private started = false;
+  start(): void {
+    this.started = true;
+    if (this.connected) {
+      this.room.send('ready');
+    }
+  }
   private observedElapsed = -1;
   private observedAt = 0;
   get serverTime(): number {
@@ -61,6 +71,9 @@ export class GameNetwork {
   private onReconnect = (): void => {
     this.connected = true;
     this.local?.reset();
+    if (this.started) {
+      this.start();
+    }
   };
   frame(now: number, intent: Intent): boolean {
     if (this.observedElapsed !== this.room.state.elapsed) {
@@ -69,13 +82,15 @@ export class GameNetwork {
     }
     const self = this.room.state.players.get(this.room.sessionId);
     if (self && !this.local) {
-      this.local = this.predict.reconciler(self, {
-        // Combat timers/effects stay authoritative; only movement fields are replayed.
-        fields: ['x', 'y', 'aim', 'hp', 'connected'],
+      this.local = this.predict.sim({
+        world: movementState(self),
+        adopt: (p) => Object.assign(p, movementState(self)),
+        // Timers participate in replay, but only positions affect smoothing and drift.
+        pose: (p) => ({ x: p.x, y: p.y }),
         input: this.input,
         step: (ctx, p, cmd) => {
           if (this.room.state.outcome !== 'failed' && this.room.state.saveStatus !== 'error') {
-            movePlayer(p, cmd, ctx.dt, this.map.obstacles);
+            moveFighter(p, cmd, ctx.dt, this.map.obstacles);
           }
         },
         smoothMs: 65,
@@ -109,22 +124,33 @@ export class GameNetwork {
       }
     }
     const steps = this.predict.tick(now);
-    if (!this.connected) {
+    if (!this.connected || !this.started || !self?.connected) {
       return false;
     }
     for (let i = 0; i < steps; i++) {
       Object.assign(this.input.data, intent);
+      this.input.data.dash = i === 0 && intent.dash === true;
       this.input.send();
     }
     return steps > 0;
+  }
+  position(entity: Point, axis: 'x' | 'y'): number {
+    return this.local && entity === this.room.state.players.get(this.room.sessionId)
+      ? this.local.value(axis)
+      : this.predict.value(entity, axis);
+  }
+  movement(player: Player): FighterMovement {
+    return player === this.room.state.players.get(this.room.sessionId)
+      ? (this.local?.world ?? player)
+      : player;
   }
   diagnostics(): { rtt: number; drift: number; pending: number; x: number; y: number } {
     return {
       rtt: this.room.clock.smoothedRtt(),
       drift: this.local?.drift.ema ?? 0,
       pending: this.input.pendingCount,
-      x: this.local?.state.x ?? 0,
-      y: this.local?.state.y ?? 0,
+      x: this.local?.world.x ?? 0,
+      y: this.local?.world.y ?? 0,
     };
   }
   dispose(): void {

@@ -1,6 +1,8 @@
 import { EnemyCombat } from './enemy-combat.js';
+import { EnemyContact } from './enemy-contact.js';
 import {
   CHARGE,
+  PERFECT_STUN,
   updateCharge,
   sectorHits,
   COMBAT,
@@ -8,6 +10,7 @@ import {
   RULES,
   WORLD,
   Player,
+  Mob,
   Projectile,
   getMap,
   enemyRules,
@@ -17,7 +20,6 @@ import {
   equippedCombat,
   equipmentStats,
   type WorldState,
-  type Mob,
   type Intent,
   type GameMap,
   type Point,
@@ -31,6 +33,7 @@ interface Shot {
   expires: number;
   rules: ProjectileRules;
   hostile: boolean;
+  perfect: boolean;
 }
 interface Impact {
   fraction: number;
@@ -43,12 +46,15 @@ export class Combat {
   private shots = new Map<string, Shot>();
   private shotId = 0;
   private chargeInputs = new Map<string, number>();
+  readonly contact: EnemyContact;
   private readonly map: GameMap;
   constructor(
     private state: WorldState,
     private defeated: (mob: Mob) => void = () => {},
+    private random: () => number = Math.random,
   ) {
     this.map = getMap(state.mapId);
+    this.contact = new EnemyContact(state, this.map, (mob, ms) => this.enemyCombat.stun(mob, ms));
     this.enemyCombat = new EnemyCombat(
       state,
       this.map,
@@ -62,6 +68,11 @@ export class Combat {
       return;
     }
     const now = this.state.elapsed;
+    if (now < player.stunnedUntil) {
+      player.chargeStartedAt = -1;
+      this.chargeInputs.delete(id);
+      return;
+    }
     const rules = equippedCombat(player);
     if (input.special && now + 1e-6 >= player.nextSpecialAt) {
       player.nextSpecialAt = now + rules.special.cooldownMs;
@@ -92,6 +103,7 @@ export class Combat {
     }
     if (multiplier !== null) {
       player.lastAttackAt = now;
+      player.lastAttackMultiplier = multiplier;
       if (player.characterClass === 'warrior') {
         this.sweep(id, player, input.aim, multiplier);
       } else {
@@ -104,6 +116,8 @@ export class Combat {
           Math.round(
             PROJECTILES[kind].damage * equipmentStats(player).damageMultiplier * multiplier,
           ),
+          undefined,
+          multiplier >= CHARGE.maxDamage,
         );
       }
     }
@@ -116,6 +130,7 @@ export class Combat {
     kind: ProjectileKind,
     damage?: number,
     speed?: number,
+    perfect = false,
   ): void {
     const player = this.state.players.get(owner);
     const scaled = Math.round(
@@ -137,6 +152,7 @@ export class Combat {
       expires: this.state.elapsed + rules.lifeMs,
       rules,
       hostile: kind === 'bolt',
+      perfect,
     });
   }
 
@@ -161,7 +177,7 @@ export class Combat {
       const hit = this.impact(p, end, shot.rules.radius, shot.hostile, p.owner);
       if (hit.fraction !== Infinity) {
         if (hit.victim) {
-          this.damage(hit.victim, shot.rules.damage, p.owner);
+          this.damage(hit.victim, shot.rules.damage, p.owner, shot.perfect);
         }
         this.remove(id);
       } else {
@@ -180,6 +196,7 @@ export class Combat {
 
   removeOwner(owner: string): void {
     this.chargeInputs.delete(owner);
+    this.contact.remove(owner);
     for (const [id, p] of this.state.projectiles) {
       if (p.owner === owner) {
         this.remove(id);
@@ -204,7 +221,7 @@ export class Combat {
         sectorHits(player, angle, COMBAT.swordReach, COMBAT.swordHalfAngle, target, radius) &&
         terrainHit(player, target, 0, this.map.obstacles) === null
       ) {
-        this.damage(target, damage, owner);
+        this.damage(target, damage, owner, multiplier >= CHARGE.maxDamage);
       }
     }
   }
@@ -244,7 +261,7 @@ export class Combat {
     this.enemyCombat.attack(id, mob);
   }
 
-  private damage(target: Player | Mob, amount: number, ownerId: string): void {
+  private damage(target: Player | Mob, amount: number, ownerId: string, perfect = false): void {
     if (target.hp <= 0) {
       return;
     }
@@ -267,12 +284,20 @@ export class Combat {
     }
     target.hp = Math.max(0, target.hp - amount);
     if (target.hp > 0) {
+      if (perfect && target instanceof Mob) {
+        const stun = PERFECT_STUN[target.role === 'boss' ? 'boss' : 'mob'];
+        if (this.random() < stun.chance) {
+          this.enemyCombat.stun(target, stun.durationMs);
+        }
+      }
       return;
     }
     target.respawnAt =
       this.state.elapsed + (target instanceof Player ? RULES.playerRespawnMs : RULES.mobRespawnMs);
     if (target instanceof Player) {
       target.invulnerableUntil = 0;
+      target.stunnedUntil = 0;
+      target.dashRemaining = 0;
       target.chargeStartedAt = -1;
       const owner = this.state.players.get(ownerId);
       if (this.state.mode === 'fight' && owner && owner !== target) {

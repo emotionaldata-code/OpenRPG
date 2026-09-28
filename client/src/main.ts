@@ -202,7 +202,11 @@ async function enter(id?: string): Promise<void> {
     });
     game.events.once(Phaser.Core.Events.POST_RENDER, () => {
       if (gameRoom === room) {
-        hideLoading();
+        hideLoading(() => {
+          if (gameRoom === room) {
+            network?.start();
+          }
+        });
       }
     });
     const url = new URL(location.href);

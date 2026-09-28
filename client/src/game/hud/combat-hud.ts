@@ -1,6 +1,7 @@
-import { chargeProgress, equippedCombat, type Player } from '@openrpg/shared';
+import { chargeProgress, classMovement, equippedCombat, type Player } from '@openrpg/shared';
 
 const icons = {
+  dash: '<path d="m12 7 10 9-10 9M4 9h5M2 16h7M4 23h5"/>',
   arrow: '<path d="M7 25 25 7M16 7h9v9M7 19v6h6"/>',
   storm:
     '<path d="M16 3v26M3 16h26M7 7l18 18M7 25 25 7M13 6l3-3 3 3M26 13l3 3-3 3M13 26l3 3 3-3M6 13l-3 3 3 3"/>',
@@ -19,10 +20,10 @@ export class CombatHud {
   private slots: Slot[];
   private kind = '';
   constructor(root: HTMLElement) {
-    root.innerHTML = ['HOLD LEFT · RELEASE', 'RIGHT CLICK']
+    root.innerHTML = ['HOLD LEFT · RELEASE', 'RIGHT CLICK', 'Q · DODGE']
       .map(
         (key, i) =>
-          `<div class="ability" id="ability-${i === 0 ? 'primary' : 'special'}"><div class="ability-rune" aria-hidden="true"></div><div class="ability-body"><small>${key}</small><strong></strong><div class="ability-track"><i></i></div></div><span class="ability-time"></span></div>`,
+          `<div class="ability" id="ability-${['primary', 'special', 'dash'][i]}"><div class="ability-rune" aria-hidden="true"></div><div class="ability-body"><small>${key}</small><strong></strong><div class="ability-track"><i></i></div></div><span class="ability-time"></span></div>`,
       )
       .join('');
     this.slots = Array.from(root.querySelectorAll<HTMLElement>('.ability')).map((el) => ({
@@ -35,6 +36,8 @@ export class CombatHud {
   }
   update(player: Player, now: number, connected: boolean): void {
     const rules = equippedCombat(player);
+    const dash = classMovement(player.characterClass).dash;
+    const abilities = [rules.primary, rules.special, dash];
     if (this.kind !== player.characterClass) {
       this.kind = player.characterClass;
       const symbols =
@@ -44,26 +47,30 @@ export class CombatHud {
             ? [icons.sword, icons.shield]
             : [icons.arrow, icons.storm];
       this.slots.forEach((slot, i) => {
-        slot.name.textContent = (i === 0 ? rules.primary : rules.special).name;
-        slot.icon.innerHTML = `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${symbols[i]}</svg>`;
+        slot.name.textContent = abilities[i]!.name;
+        slot.icon.innerHTML = `<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${i === 2 ? icons.dash : symbols[i]}</svg>`;
       });
     }
     this.slots.forEach((slot, i) => {
-      const remaining = i === 0 ? 0 : Math.max(0, player.nextSpecialAt - now);
-      const available = connected && player.hp > 0;
+      const remaining =
+        i === 0 ? 0 : Math.max(0, (i === 1 ? player.nextSpecialAt : player.nextDashAt) - now);
+      const stunned = player.stunnedUntil > now;
+      const available = connected && player.hp > 0 && !stunned;
       const active = available && i === 1 && player.invulnerableUntil > now;
       const charging = available && i === 0 && player.chargeStartedAt >= 0;
       const label = !connected
         ? 'Offline'
         : player.hp <= 0
           ? '—'
-          : active
-            ? `${((player.invulnerableUntil - now) / 1000).toFixed(1)}s ward`
-            : charging
-              ? 'Release'
-              : remaining > 0
-                ? `${(remaining / 1000).toFixed(1)}s`
-                : 'Ready';
+          : stunned
+            ? 'Stunned'
+            : active
+              ? `${((player.invulnerableUntil - now) / 1000).toFixed(1)}s ward`
+              : charging
+                ? 'Release'
+                : remaining > 0
+                  ? `${(remaining / 1000).toFixed(1)}s`
+                  : 'Ready';
       if (slot.time.textContent !== label) {
         slot.time.textContent = label;
       }
@@ -72,15 +79,12 @@ export class CombatHud {
           ? charging
             ? chargeProgress(now - player.chargeStartedAt, rules.primary.chargeMs)
             : 1
-          : Math.max(0, 1 - remaining / rules.special.cooldownMs);
+          : Math.max(0, 1 - remaining / (i === 1 ? rules.special.cooldownMs : dash.cooldownMs));
       slot.fill.style.transform = `scaleX(${fill})`;
       slot.root.classList.toggle('ready', available && remaining === 0 && !charging);
       slot.root.classList.toggle('active', active);
       slot.root.classList.toggle('unavailable', !available);
-      slot.root.setAttribute(
-        'aria-label',
-        `${(i === 0 ? rules.primary : rules.special).name}: ${label}`,
-      );
+      slot.root.setAttribute('aria-label', `${abilities[i]!.name}: ${label}`);
     });
   }
 }

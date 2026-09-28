@@ -31,8 +31,8 @@ Playwright starts or reuses `localhost:5173`; a reused app also needs a healthy 
 
 | Change                          | Primary tests under `tests/`                                                    | Browser checks under `tests/browser/`                |
 | ------------------------------- | ------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| Movement, collision, prediction | `simulation.test.ts`, `maps.test.ts`, `integration.test.ts`                     | `game.spec.ts`, `maps.spec.ts`                       |
-| Abilities, AI, mode rules       | `combat.test.ts`, `enemy-tactics.test.ts`, `adventure.test.ts`, `fight.test.ts` | `maps.spec.ts`, `adventure.spec.ts`, `fight.spec.ts` |
+| Movement, collision, prediction | `movement.test.ts`, `simulation.test.ts`, `maps.test.ts`, `integration.test.ts` | `mobility.spec.ts`, `game.spec.ts`, `maps.spec.ts` |
+| Abilities, AI, mode rules       | `combat.test.ts`, `hit-reaction.test.ts`, `enemy-tactics.test.ts`, `adventure.test.ts`, `fight.test.ts` | `maps.spec.ts`, `adventure.spec.ts`, `fight.spec.ts` |
 | Accounts, sessions, migrations  | `accounts.test.ts`, `environment.test.ts`, `integration.test.ts`                | `accounts.spec.ts`                                   |
 | Inventory, trading, rewards     | `adventure.test.ts`, `loot-shop.test.ts`, `integration.test.ts`                 | `loot-shop.spec.ts`, `adventure.spec.ts`             |
 | Skin validation/rendering       | `skins.test.ts`                                                                 | `skins.spec.ts`                                      |

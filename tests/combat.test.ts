@@ -86,7 +86,7 @@ for (const kind of ['archer', 'mage', 'warrior'] as const) {
 for (const kind of ['archer', 'mage', 'warrior'] as const) {
   test(`${kind}: authoritative damage peaks in the sweet spot and falls on either side`, () => {
     const damages: number[] = [];
-    for (const progress of [0, 0.3, 0.65, 0.7, 0.8, 0.9, 1, 3]) {
+    for (const progress of [0, 0.3, 0.65, 0.7, 0.8, 0.9, 1, 3, 1.7, 3.7]) {
       const { state, player, combat } = fixture(kind);
       const mob = new Mob({ x: 290, y: 790, hp: 1000 });
       state.mobs.set('victim', mob);
@@ -98,7 +98,7 @@ for (const kind of ['archer', 'mage', 'warrior'] as const) {
         kind === 'warrior'
           ? COMBAT.swordDamage
           : PROJECTILES[kind === 'mage' ? 'fireball' : 'arrow'].damage;
-      assert.equal(mob.hp, 1000 - Math.round(base * chargeMultiplier(progress)));
+      assert.equal(mob.hp, 1000 - Math.round(base * chargeMultiplier(chargeProgress(progress, 1))));
       damages.push(1000 - mob.hp);
     }
     assert.ok(damages[0]! < damages[1]! && damages[1]! < damages[2]!);
@@ -106,8 +106,11 @@ for (const kind of ['archer', 'mage', 'warrior'] as const) {
     assert.equal(damages[3], damages[4]);
     assert.ok(damages[4]! > damages[5]! && damages[5]! > damages[6]!);
     assert.equal(damages[6], damages[7]);
+    assert.equal(damages[3], damages[8]);
+    assert.equal(damages[3], damages[9]);
     assert.equal(chargeProgress(-100, 1000), 0);
-    assert.equal(chargeProgress(3000, 1000), 1);
+    assert.equal(chargeProgress(3000, 1000), 0);
+    assert.equal(chargeProgress(3700, 1000), 0.7);
   });
 }
 test('cancel, input silence and death discard a charge without firing', () => {
@@ -201,17 +204,17 @@ test('sword sweep hits multiple enemies in its sector once, respects terrain, an
   sim.addPlayer('hero', 'Hero', 'warrior');
   state.mobs.clear();
   const player = state.players.get('hero')!;
-  const front = new Mob({ x: 295, y: 790 }),
+  const front = new Mob({ x: 365, y: 790 }),
     side = new Mob({ x: 280, y: 835 }),
     back = new Mob({ x: 210, y: 790 }),
-    far = new Mob({ x: 370, y: 790 });
+    far = new Mob({ x: 390, y: 790 });
   for (const [key, mob] of Object.entries({ front, side, back, far })) {
     state.mobs.set(key, mob);
   }
   sim.applyInput('hero', intent({ fire: true, moveX: 1 }), 1 / 30);
   state.elapsed = 490;
   sim.applyInput('hero', intent({ moveX: 1 }), 1 / 30);
-  assert.equal(player.x, 262);
+  assert.equal(player.x, 264);
   assert.equal(player.sweepX, player.x);
   assert.equal(front.hp, 75 - 42);
   assert.equal(side.hp, 75 - 42);
@@ -247,7 +250,7 @@ test('sector collision handles grazing edges, rear targets and wrapped aim angle
 });
 test('sword kills award one kill and schedule the standard mob respawn', () => {
   const { state, player, combat } = fixture('warrior');
-  const mob = new Mob({ x: 290, y: 790, hp: 9 });
+  const mob = new Mob({ x: 290, y: 790, hp: 1 });
   state.mobs.set('mob', mob);
   combat.attack('hero', player, intent({ fire: true }));
   combat.attack('hero', player, intent());
@@ -318,3 +321,23 @@ test('invalid attack flags are sanitized and removing an owner cleans every proj
   assert.equal(state.projectiles.size, 0);
   combat.step(1);
 });
+
+for (const kind of ['archer', 'mage', 'warrior'] as const) {
+  test(`${kind}: maximum-rate tapping deals less than a third of well-timed damage`, () => {
+    const damage = (holdTicks: number): number => {
+      const { state, player, combat } = fixture(kind);
+      const mob = new Mob({ x: 290, y: 790, hp: 10000 });
+      state.mobs.set('target', mob);
+      for (let tick = 0; tick < 180; tick++) {
+        state.elapsed = (tick * 1000) / 30;
+        mob.x = 290;
+        combat.attack('hero', player, intent({ fire: tick % (holdTicks + 1) < holdTicks }));
+        combat.step(1 / 30);
+      }
+      return 10000 - mob.hp;
+    };
+    const spam = damage(1);
+    const timed = damage(Math.round((CLASS_COMBAT[kind].primary.chargeMs * 0.7 * 30) / 1000));
+    assert.ok(spam > 0 && spam < timed / 3, `${spam} tapping versus ${timed} timed`);
+  });
+}

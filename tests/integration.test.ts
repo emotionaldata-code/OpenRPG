@@ -11,6 +11,9 @@ import {
   WorldState,
   MoveInput,
   movePlayer,
+  moveFighter,
+  movementState,
+  CLASS_MOVEMENT,
   RULES,
   CLASS_COMBAT,
   MAP_IDS,
@@ -21,6 +24,7 @@ import {
 import { createGameServer } from '../server/src/app.config.js';
 import type { Village } from '../server/src/rooms/Village.js';
 import type { Expedition } from '../server/src/rooms/Expedition.js';
+import { Combat } from '../server/src/simulation/combat.js';
 import { Accounts } from '../server/src/auth/accounts.js';
 import { testDatabase } from './helpers/database.js';
 let database: Awaited<ReturnType<typeof testDatabase>>;
@@ -47,6 +51,11 @@ async function until(predicate: () => boolean, timeout = 3000): Promise<void> {
     await sleep(15);
   }
 }
+async function enter(room: Room<WorldState>): Promise<void> {
+  await until(() => !!room.state?.players?.has(room.sessionId));
+  room.send('ready');
+  await until(() => room.state.players.get(room.sessionId)!.connected);
+}
 async function create(
   name = 'Archer',
   visibility = 'public',
@@ -57,7 +66,7 @@ async function create(
   ).create<WorldState>('expedition', { name, visibility, characterClass }, WorldState);
   connected.push(room);
   room.reconnection.minUptime = 0;
-  await until(() => !!room.state?.players?.has(room.sessionId));
+  await enter(room);
   return room;
 }
 async function join(id: string, name: string, characterClass: CharacterClass = 'archer') {
@@ -65,7 +74,7 @@ async function join(id: string, name: string, characterClass: CharacterClass = '
     await authenticated(name)
   ).joinById<WorldState>(id, { name, characterClass }, WorldState);
   connected.push(room);
-  await until(() => !!room.state?.players?.has(room.sessionId));
+  await enter(room);
   return room;
 }
 const authoritative = (room: Room<WorldState>): Expedition =>
@@ -92,6 +101,102 @@ after(async () => {
   await server?.gracefullyShutdown(false);
   await database?.cleanup();
 });
+test('loading players cannot act or take damage, including across reconnects', async () => {
+  const room = await (
+    await authenticated('Loading')
+  ).create<WorldState>(
+    'expedition',
+    { visibility: 'invite', characterClass: 'mage', loadout: { potions: 1 } },
+    WorldState,
+  );
+  connected.push(room);
+  await until(() => !!room.state?.players?.has(room.sessionId));
+  const host = authoritative(room);
+  const player = host.state.players.get(room.sessionId)!;
+  const combat = new Combat(host.state);
+  const mob = host.state.mobs.get('melee-1')!;
+  // Outside camp, with no protection: the loading state itself must block hits.
+  Object.assign(player, { x: 750, y: 790, hp: 50, protectedUntil: 0 });
+  Object.assign(mob, { x: 720, y: 790, attackKind: 'strike', attackAngle: 0 });
+  const input = room.input({ type: MoveInput });
+  Object.assign(input.data, { moveX: 1, fire: true, special: true, dash: true });
+  input.send();
+  room.send('potion');
+  combat.enemyAttack('melee-1', mob);
+  combat.fire('melee-1', mob, 0, 'bolt');
+  combat.step(0.2);
+  combat.removeOwner('melee-1');
+  await sleep(150);
+  assert.equal(player.connected, false);
+  assert.equal(player.ready, false);
+  assert.equal(player.x, 750);
+  assert.equal(player.hp, 50);
+  assert.equal(player.potions, 1);
+  assert.equal(player.nextDashAt, 0);
+  assert.equal(player.nextSpecialAt, 0);
+  assert.equal(player.chargeStartedAt, -1);
+  room.reconnection.minUptime = 0;
+  let recovered = false;
+  room.onReconnect(() => {
+    recovered = true;
+  });
+  room.connection.close();
+  await until(() => recovered, 5000);
+  assert.equal(player.connected, false);
+  // Even commands queued immediately before readiness must never be replayed.
+  input.send();
+  await enter(room);
+  const protection = player.protectedUntil;
+  assert.ok(protection > host.state.elapsed);
+  await sleep(100);
+  assert.equal(player.x, 750);
+  assert.equal(player.nextDashAt, 0);
+  room.send('ready');
+  await sleep(100);
+  assert.equal(player.protectedUntil, protection);
+  // Check readiness movement in clear space; patrol contact can now knock the player back.
+  Object.assign(mob, { x: 650, y: 790 });
+  Object.assign(input.data, { moveX: 1, fire: false, special: false, dash: false });
+  input.send();
+  await until(() => player.x > 750);
+  player.protectedUntil = 0;
+  Object.assign(mob, { x: player.x - 30, y: player.y, attackKind: 'strike', attackAngle: 0 });
+  combat.enemyAttack('melee-1', mob);
+  assert.ok(player.hp < 50);
+  await room.leave();
+});
+
+test('loading seats cannot prevent a Story wipe or earn completion rewards', async () => {
+  for (const outcome of ['failed', 'complete'] as const) {
+    const room = await (
+      await authenticated('StoryReady')
+    ).create<WorldState>(
+      'expedition',
+      { mode: 'story', visibility: 'invite', characterClass: 'archer' },
+      WorldState,
+    );
+    connected.push(room);
+    await enter(room);
+    const pending = await (
+      await authenticated('StoryLoading')
+    ).joinById<WorldState>(room.roomId, { characterClass: 'archer' }, WorldState);
+    connected.push(pending);
+    await until(() => !!pending.state?.players?.has(pending.sessionId));
+    const host = authoritative(room);
+    const accountId = host.clients.find((c) => c.sessionId === pending.sessionId)!.auth!.profile.id;
+    if (outcome === 'failed') {
+      host.state.players.get(room.sessionId)!.hp = 0;
+    } else {
+      for (const mob of host.state.mobs.values()) {
+        mob.hp = 0;
+      }
+    }
+    await until(() => host.state.outcome === outcome && host.state.saveStatus === 'saved');
+    assert.equal((await host.adventures.profile(accountId)).completedMaps, 0);
+    await leave(room, pending);
+  }
+});
+
 test('built-in lobby discovers public rooms, hides invite rooms, and updates on disposal', async () => {
   const lobby = await client.joinOrCreate('lobby', { filter: { name: 'expedition' } });
   connected.push(lobby);
@@ -234,10 +339,13 @@ test('automatic reconnection preserves session, pauses movement, and resets inpu
   const input = room.input({ type: MoveInput });
   const epoch = input.epoch;
   input.data.special = true;
+  input.data.dash = true;
   input.send();
   await until(() => sr.state.players.get(sid)!.nextSpecialAt > 0);
   const cooldown = sr.state.players.get(sid)!.nextSpecialAt;
+  const dashCooldown = sr.state.players.get(sid)!.nextDashAt;
   input.data.special = false;
+  input.data.dash = false;
   input.data.fire = true;
   input.send();
   await until(() => sr.state.players.get(sid)!.chargeStartedAt >= 0);
@@ -250,6 +358,7 @@ test('automatic reconnection preserves session, pauses movement, and resets inpu
   await dropped;
   await sleep(50);
   assert.equal(sr.state.players.get(sid)!.connected, false);
+  assert.equal(sr.state.players.get(sid)!.dashRemaining, 0);
   const x = sr.state.players.get(sid)!.x;
   await recovered;
   await until(() => sr.state.players.get(sid)!.connected);
@@ -257,6 +366,7 @@ test('automatic reconnection preserves session, pauses movement, and resets inpu
   assert.equal(room.sessionId, sid);
   assert.ok(input.epoch > epoch);
   assert.equal(sr.state.players.get(sid)!.nextSpecialAt, cooldown);
+  assert.equal(sr.state.players.get(sid)!.nextDashAt, dashCooldown);
   assert.equal(sr.state.players.get(sid)!.chargeStartedAt, -1);
   assert.equal(sr.state.players.get(sid)!.lastAttackAt, -1);
   input.data.moveX = 1;
@@ -399,7 +509,7 @@ test('each selected map is synchronized, listed, isolated, and inherited by join
       WorldState,
     );
     connected.push(room);
-    await until(() => !!room.state?.players?.has(room.sessionId));
+    await enter(room);
     const serverRoom = authoritative(room);
     assert.equal(room.state.mapId, mapId);
     assert.equal(serverRoom.metadata.mapId, mapId);
@@ -442,7 +552,7 @@ test('room loadouts spend supplies once, refuse forged equipment and retain carr
     WorldState,
   );
   connected.push(room);
-  await until(() => !!room.state?.players?.has(room.sessionId));
+  await enter(room);
   assert.equal(authoritative(room).state.players.get(room.sessionId)!.potions, 2);
   await assert.rejects(sdk.joinById(room.roomId, { characterClass: 'mage' }));
   assert.equal(authoritative(room).state.players.size, 1);
@@ -522,7 +632,7 @@ test('story room enforces map locks, one life per account, terminal admission an
     WorldState,
   );
   connected.push(room);
-  await until(() => !!room.state?.players?.has(room.sessionId));
+  await enter(room);
   const dead = await join(room.roomId, 'StoryFallen'),
     otherSdk = await authenticated('LockedGuest');
   const serverRoom = authoritative(room),
@@ -545,7 +655,7 @@ test('story room enforces map locks, one life per account, terminal admission an
     WorldState,
   );
   connected.push(castle);
-  await until(() => !!castle.state?.players?.has(castle.sessionId));
+  await enter(castle);
   await assert.rejects(
     otherSdk.joinById(castle.roomId, {
       characterClass: 'archer',
@@ -586,7 +696,7 @@ test('Fight admits fresh accounts on every map with no enemies or story restrict
       WorldState,
     );
     connected.push(room);
-    await until(() => !!room.state?.players?.has(room.sessionId));
+    await enter(room);
     assert.equal(room.state.mode, 'fight');
     assert.equal(room.state.mapId, mapId);
     assert.equal(room.state.mobs.size, 0);
@@ -603,7 +713,7 @@ test('Fight synchronizes PvP damage, kills and respawns to three players without
     WorldState,
   );
   connected.push(room);
-  await until(() => !!room.state?.players?.has(room.sessionId));
+  await enter(room);
   const rival = await join(room.roomId, 'Rival'),
     witness = await join(room.roomId, 'Witness', 'warrior');
   const sr = authoritative(room),
@@ -827,4 +937,50 @@ test('revoking an account session removes its village presence immediately', asy
   await accounts.logout(registration.token);
   await until(() => ended);
   await until(() => !matchMaker.getLocalRoomById(room.roomId));
+});
+
+test('class dashes predict immediately and reconcile without replaying distance or cooldown', async () => {
+  for (const kind of ['warrior', 'archer', 'mage'] as const) {
+    const room = await create('Dodger', 'invite', kind);
+    const self = room.state.players.get(room.sessionId)!;
+    const input = room.input({ type: MoveInput });
+    const predict = Predict.get(room, { delay: 100 });
+    const local = predict.sim({
+      input,
+      world: movementState(self),
+      adopt: (p) => Object.assign(p, movementState(self)),
+      pose: (p) => ({ x: p.x, y: p.y }),
+      smoothMs: 0,
+      step: (ctx, player, cmd: Intent) => moveFighter(player, cmd, ctx.dt, MAPS.forest.obstacles),
+    });
+    try {
+      const start = self.x;
+      input.data.aim = 0;
+      input.data.dash = true;
+      input.send();
+      assert.ok(local.world.x > start, 'movement starts before a server patch');
+      input.data.dash = false;
+      // Stream fixed-rate input, including idle frames for the active dash.
+      for (let i = 0; i < 35; i++) {
+        const steps = predict.tick(performance.now());
+        for (let j = 0; j < steps; j++) {
+          input.send();
+        }
+        await sleep(16);
+      }
+      await until(() => input.pendingCount === 0);
+      assert.ok(Math.abs(self.x - start - CLASS_MOVEMENT[kind].dash.distance) < 0.01);
+      assert.ok(Math.abs(local.world.x - self.x) < 0.01);
+      assert.equal(local.world.nextDashAt, self.nextDashAt);
+      const cooldown = self.nextDashAt;
+      input.data.dash = true;
+      input.send();
+      await until(() => input.pendingCount === 0);
+      assert.equal(self.nextDashAt, cooldown);
+      assert.ok(Math.abs(self.x - start - CLASS_MOVEMENT[kind].dash.distance) < 0.01);
+    } finally {
+      predict.dispose();
+      await room.leave();
+    }
+  }
 });

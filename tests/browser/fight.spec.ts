@@ -84,7 +84,8 @@ for (const delayed of [false, true]) {
     browser,
     baseURL,
   }, info) => {
-    test.setTimeout(90000);
+    // Includes three village routes at class-specific speeds, network jitter and cleanup.
+    test.setTimeout(120000);
     const contexts = await Promise.all(
       [0, 1, 2].map(() => browser.newContext({ baseURL, viewport: { width: 1440, height: 1000 } })),
     );

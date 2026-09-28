@@ -1,5 +1,5 @@
 import { audio } from '../audio/audio';
-import { CombatAudio, soundClass } from '../audio/game-audio';
+import { CombatAudio } from '../audio/game-audio';
 import Phaser from 'phaser';
 import { ChargeView } from './views/charge-view';
 import { EquipmentView } from './views/equipment-view';
@@ -62,7 +62,10 @@ export class ExpeditionScene extends Phaser.Scene {
     drawWorld(this, map, fight);
     this.skins = new RoomSkins(this);
     this.controls = new Controls(this, () => {
-      if (this.net.connected) {
+      if (
+        this.net.connected &&
+        this.net.room.state.players.get(this.net.room.sessionId)?.connected
+      ) {
         this.net.room.send('potion');
       }
     });
@@ -91,14 +94,15 @@ export class ExpeditionScene extends Phaser.Scene {
     this.events.once('shutdown', dispose);
     this.events.once('destroy', dispose);
   }
-  update(time: number): void {
+  update(time: number, delta: number): void {
     const room = this.net.room;
     const self = room.state.players.get(room.sessionId);
     const position = self
-      ? { x: this.net.predict.value(self, 'x'), y: this.net.predict.value(self, 'y') }
+      ? { x: this.net.position(self, 'x'), y: this.net.position(self, 'y') }
       : this.net.map.spawns[0]!;
     if (
       !self ||
+      !self.connected ||
       self.hp <= 0 ||
       !this.net.connected ||
       room.state.outcome === 'failed' ||
@@ -134,8 +138,15 @@ export class ExpeditionScene extends Phaser.Scene {
       this.cameras.main.startFollow(localView.sprite, true, 1, 1);
       this.following = true;
     }
+    // Ease authoritative knockback without adding lag to ordinary movement.
+    const recoveryMs =
+      self && self.hp > 0 && self.stunnedUntil > 0
+        ? Math.max(0, self.stunnedUntil + 300 - this.net.serverTime)
+        : 0;
+    const smoothMs = 220 * Math.min(1, recoveryMs / 300);
+    this.cameras.main.setLerp(smoothMs > 0 ? 1 - Math.exp(-delta / smoothMs) : 1);
     this.aimLine.clear();
-    if (localView && self && self.hp > 0) {
+    if (localView && self?.ready && self.hp > 0) {
       const x = localView.sprite.x,
         y = localView.sprite.y;
       const reach = self.characterClass === 'warrior' ? COMBAT.swordReach : 52;
@@ -154,7 +165,7 @@ export class ExpeditionScene extends Phaser.Scene {
     this.combat.draw();
     this.loot.draw();
     this.charge.draw(intent);
-    audio.charge(this.charge.progress, soundClass(self?.characterClass ?? 'archer'));
+    audio.charge(this.charge.progress !== null);
     this.sounds.update(room.state, room.sessionId, this.net.connected && audio.audible);
     this.hud(this.net);
   }
@@ -173,8 +184,8 @@ export class ExpeditionScene extends Phaser.Scene {
     const boss = mob?.role === 'boss',
       height = boss ? 85 : 50;
     let view = this.actors.get(id);
-    const x = this.net.predict.value(actor, 'x'),
-      y = this.net.predict.value(actor, 'y');
+    const x = this.net.position(actor, 'x'),
+      y = this.net.position(actor, 'y');
     if (!view) {
       view = {
         sprite: this.add
@@ -199,7 +210,7 @@ export class ExpeditionScene extends Phaser.Scene {
       }
       this.actors.set(id, view);
     }
-    const alive = actor.hp > 0;
+    const alive = actor.hp > 0 && (kind === 'enemy' || (actor as Player).ready);
     view.sprite.setVisible(alive);
     view.bar.setVisible(alive);
     view.label.setVisible(alive);
@@ -232,10 +243,14 @@ export class ExpeditionScene extends Phaser.Scene {
           ? 0.65 + Math.sin(this.time.now / 90) * 0.2
           : 1,
     );
+    const labelColor = opponent ? '#e5a18e' : '#e6e4c5';
+    // Phaser rebuilds the text texture on every setColor call, even for the same color.
+    if (view.label.style.color !== labelColor) {
+      view.label.setColor(labelColor);
+    }
     view.label
       .setPosition(x, y - height)
       .setDepth(y + 1)
-      .setColor(opponent ? '#e5a18e' : '#e6e4c5')
       .setText(
         player
           ? `${player.name}${id === this.net.room.sessionId ? ' · YOU' : opponent ? ' · RIVAL' : ''}`

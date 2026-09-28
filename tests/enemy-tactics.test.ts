@@ -13,6 +13,8 @@ import {
   WorldState,
   enemyRules,
   attackPattern,
+  bossAttackAreas,
+  attackAreaHits,
   overlaps,
   moveBody,
   terrainHit,
@@ -55,7 +57,7 @@ test('long narrow realms increase encounter count, pace and mechanical complexit
   MAP_IDS.forEach((id, i) => {
     assert.equal(ENCOUNTERS[id].tier, i + 1);
     assert.equal(MAPS[id].enemies.length, [5, 7, 8, 10, 12][i]);
-    assert.equal(new Set(ENCOUNTERS[id].boss).size, [2, 3, 4, 5, 7][i]);
+    assert.equal(new Set(ENCOUNTERS[id].boss).size, [3, 4, 5, 6, 8][i]);
     assert.ok(MAPS[id].landmark.x > 3000);
     assert.ok(
       MAPS[id].enemies
@@ -140,6 +142,10 @@ for (const id of MAP_IDS) {
     assert.ok(
       attacks.size >= Math.min(3, ENCOUNTERS[id].boss.length),
       `${id}: ${[...attacks].join(', ')}`,
+    );
+    assert.ok(
+      [...attacks].some((kind) => ENEMY_ATTACKS[kind as EnemyAttack].name),
+      'boss uses its exclusive special',
     );
     assert.equal(sawEnrage, true);
     assert.equal(boss.enraged, boss.hp <= enemyRules('boss', id).health / 2);
@@ -294,3 +300,83 @@ for (const mode of ['testing', 'story']) {
     });
   }
 }
+
+for (const [mapId, kind] of Object.entries({
+  forest: 'roots',
+  castle: 'royal',
+  paradise: 'halo',
+  hell: 'fissure',
+  mountain: 'avalanche',
+}) as [MapId, EnemyAttack][]) {
+  test(`${mapId}: exclusive boss special hits once, respects cover and immunity`, () => {
+    for (const id of MAP_IDS) {
+      assert.equal(ENCOUNTERS[id].boss.includes(kind), id === mapId);
+      assert.ok(!ENCOUNTERS[id].melee.includes(kind) && !ENCOUNTERS[id].ranged.includes(kind));
+    }
+    const f = fight(kind, mapId);
+    // Open ground in the arena.
+    Object.assign(f.mob, {
+      x: 2800,
+      y: 500,
+      attackX: 2800,
+      attackY: 500,
+      targetX: 2920,
+      targetY: 500,
+    });
+    const pattern = attackPattern(kind, 'boss', mapId);
+    const areas = bossAttackAreas(
+      kind,
+      f.mob,
+      { x: f.mob.targetX, y: f.mob.targetY },
+      0,
+      pattern.radius,
+    );
+    const area = areas[0]!;
+    Object.assign(f.player, { x: area.x + (area.innerRadius ? 150 : 0), y: area.y });
+    const damage = Math.round(enemyRules('boss', mapId).damage * pattern.damage);
+    f.combat.enemyAttack('boss', f.mob);
+    assert.equal(f.player.hp, 100 - damage);
+    f.player.invulnerableUntil = 2000;
+    f.combat.enemyAttack('boss', f.mob);
+    assert.equal(f.player.hp, 100 - damage);
+    f.player.invulnerableUntil = 0;
+    f.player.connected = false;
+    f.combat.enemyAttack('boss', f.mob);
+    assert.equal(f.player.hp, 100 - damage);
+    f.player.connected = true;
+    // Put the target behind an authored wall, still within attack reach.
+    const wall = MAPS[mapId].obstacles.find((w) => w.width < 160 && w.height > 60)!;
+    Object.assign(f.mob, {
+      x: wall.x - 25,
+      y: wall.y + 30,
+      attackX: wall.x - 25,
+      attackY: wall.y + 30,
+    });
+    Object.assign(f.player, { x: wall.x + wall.width + 25, y: wall.y + 30 });
+    Object.assign(f.mob, { targetX: f.player.x, targetY: f.player.y });
+    f.combat.enemyAttack('boss', f.mob);
+    assert.equal(f.player.hp, 100 - damage);
+  });
+}
+
+test('boss specials have readable escape spaces and overlapping marks never multiply damage', () => {
+  const origin = { x: 2800, y: 500 },
+    target = { x: 2920, y: 500 };
+  const halo = bossAttackAreas('halo', origin, target, 0, 210)[0]!;
+  assert.equal(attackAreaHits(halo, origin, 10), false);
+  assert.equal(attackAreaHits(halo, { x: origin.x + 150, y: origin.y }, 10), true);
+  assert.equal(attackAreaHits(halo, { x: origin.x + 230, y: origin.y }, 10), false);
+  const royal = bossAttackAreas('royal', origin, target, 0, 205)[0]!;
+  assert.equal(attackAreaHits(royal, { x: origin.x - 100, y: origin.y }, 10), false);
+  const f = fight('roots');
+  Object.assign(f.mob, {
+    ...origin,
+    attackX: origin.x,
+    attackY: origin.y,
+    targetX: origin.x,
+    targetY: origin.y,
+  });
+  Object.assign(f.player, origin);
+  f.combat.enemyAttack('boss', f.mob);
+  assert.equal(f.player.hp, 82);
+});

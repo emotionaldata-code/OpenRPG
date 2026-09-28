@@ -36,6 +36,18 @@ export abstract class Expedition extends Room<{
   private participants = new Set<string>();
   private admissions = 0;
   messages = {
+    ready: (client: Client) => {
+      const player = this.state.players.get(client.sessionId);
+      if (!player || player.ready) {
+        return;
+      }
+      // Discard commands sent behind the loading screen; readiness is one-way.
+      this.inputs.get(client.sessionId).clear();
+      player.ready = true;
+      player.connected = true;
+      player.movementAt = this.state.elapsed;
+      player.protectedUntil = this.state.elapsed + RULES.protectionMs;
+    },
     'save-rewards': async () => {
       await this.rewards.flush();
       return this.rewards.backlog === 0;
@@ -139,7 +151,12 @@ export abstract class Expedition extends Room<{
         characterClass,
         equipment,
       );
-      this.state.players.get(client.sessionId)!.skinId = skinId ?? '';
+      Object.assign(this.state.players.get(client.sessionId)!, {
+        skinId: skinId ?? '',
+        ready: false,
+        connected: false,
+        protectedUntil: 0,
+      });
       if (this.state.players.size === 1) {
         await this.setMetadata({
           ...this.metadata,
@@ -168,6 +185,7 @@ export abstract class Expedition extends Room<{
       return;
     }
     p.connected = false;
+    p.dashRemaining = 0;
     p.chargeStartedAt = -1;
     this.allowReconnection(client, RULES.reconnectSeconds).catch(() => {
       /* onLeave owns cleanup */
@@ -179,7 +197,7 @@ export abstract class Expedition extends Room<{
     if (!p) {
       throw new ServerError(401, 'Session ended. Please log in again.');
     }
-    p.connected = true;
+    p.connected = p.ready;
   }
   onLeave(client: Client): void {
     this.expiryTimers.get(client.sessionId)?.clear();
@@ -214,6 +232,7 @@ export abstract class Expedition extends Room<{
     }
     for (const [id, player] of this.state.players) {
       if (!player.connected) {
+        this.inputs.get(id).clear();
         continue;
       }
       // Consume at most one command per tick: extra packets cannot buy extra movement.
@@ -228,7 +247,7 @@ export abstract class Expedition extends Room<{
       this.completionSaved = true;
       for (const [id, player] of this.state.players) {
         const session = this.sessions.get(id);
-        if (session && player.hp > 0) {
+        if (session && player.ready && player.hp > 0) {
           this.rewards.add(session.profile.id, `${this.runId}:complete`, {
             items: [],
             potions: 0,

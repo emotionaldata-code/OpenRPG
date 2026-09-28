@@ -7,6 +7,7 @@ export class Controls {
   private pressedFire = false;
   private pressedSpecial = false;
   private cancelFire = false;
+  private dash = false;
   constructor(
     private scene: Phaser.Scene,
     private potion: () => void,
@@ -16,6 +17,7 @@ export class Controls {
       Phaser.Input.Keyboard.Key
     >;
     scene.input.keyboard!.on('keydown-R', this.drink);
+    scene.input.keyboard!.on('keydown-Q', this.dodge);
     scene.input.on('pointerdown', this.down);
     scene.input.on('pointerup', this.up);
     scene.input.on('gameout', this.clear);
@@ -26,6 +28,11 @@ export class Controls {
   private drink = (event: KeyboardEvent): void => {
     if (!event.repeat) {
       this.potion();
+    }
+  };
+  private dodge = (event: KeyboardEvent): void => {
+    if (!event.repeat) {
+      this.dash = true;
     }
   };
   private down = (p: Phaser.Input.Pointer): void => {
@@ -51,6 +58,7 @@ export class Controls {
     this.pressedFire = false;
     this.pressedSpecial = false;
     this.cancelFire = false;
+    this.dash = false;
   }
   clear = (): void => {
     this.firing = false;
@@ -69,11 +77,13 @@ export class Controls {
       aim: Math.atan2(pointer.worldY - player.y, pointer.worldX - player.x),
       fire: this.firing || this.pressedFire,
       special: this.special || this.pressedSpecial,
+      dash: this.dash,
       cancelFire: this.cancelFire,
     };
   }
   dispose(): void {
     this.scene.input.keyboard?.off('keydown-R', this.drink);
+    this.scene.input.keyboard?.off('keydown-Q', this.dodge);
     window.removeEventListener('blur', this.clear);
     document.removeEventListener('visibilitychange', this.visibility);
     this.scene.input.off('pointerdown', this.down);

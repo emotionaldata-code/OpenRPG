@@ -5,6 +5,8 @@ import {
   WORLD,
   attackAngles,
   attackPattern,
+  bossAttackAreas,
+  attackAreaHits,
   enemyRole,
   enemyRules,
   sectorHits,
@@ -46,8 +48,36 @@ export class EnemyCombat {
     private damage: (player: Player, amount: number, owner: string) => void,
   ) {}
   attack(id: string, mob: Mob): void {
+    if (mob.hp <= 0 || mob.stunnedUntil > this.state.elapsed) {
+      return;
+    }
     const pattern = attackPattern(mob.attackKind, mob.role, this.map.id);
     const damage = Math.round(enemyRules(mob.role, this.map.id).damage * pattern.damage);
+    const areas = bossAttackAreas(
+      mob.attackKind,
+      { x: mob.attackX, y: mob.attackY },
+      { x: mob.targetX, y: mob.targetY },
+      mob.attackAngle,
+      pattern.radius,
+    );
+    if (areas.length) {
+      for (const player of this.state.players.values()) {
+        if (
+          player.connected &&
+          player.hp > 0 &&
+          terrainHit(mob, player, 0, this.map.obstacles) === null &&
+          areas.some(
+            (area) =>
+              attackAreaHits(area, player, RULES.playerRadius) &&
+              terrainHit(area, player, 0, this.map.obstacles) === null,
+          )
+        ) {
+          // Overlapping marks still deal one hit per attack.
+          this.damage(player, damage, id);
+        }
+      }
+      return;
+    }
     if (mob.attackKind === 'charge' || mob.attackKind === 'burst') {
       this.active.push({
         owner: id,
@@ -148,6 +178,11 @@ export class EnemyCombat {
       Object.assign(mob, end);
       return wall === null && fraction < 1 && Math.hypot(end.x - from.x, end.y - from.y) > 0.01;
     });
+  }
+  stun(mob: Mob, durationMs: number): void {
+    this.active = this.active.filter((attack) => this.state.mobs.get(attack.owner) !== mob);
+    mob.attackAt = 0;
+    mob.stunnedUntil = Math.max(mob.stunnedUntil, this.state.elapsed + durationMs);
   }
   private shoot(owner: string, from: Point, angle: number, damage: number): void {
     if (this.state.projectiles.size < ENEMY_COMBAT.maxHostileShots) {

@@ -15,11 +15,13 @@ interface Actor {
   generation: number;
   kills: number;
   connected: boolean;
+  ready: boolean;
   lastAttackAt: number;
   nextSpecialAt: number;
   invulnerableUntil: number;
   sweepAt: number;
   chargeStartedAt: number;
+  stunnedUntil: number;
 }
 interface Snapshot {
   chargeProgress: number | null;
@@ -51,6 +53,12 @@ async function ready(page: Page): Promise<void> {
   await expect(page.locator('#loading')).toBeHidden();
   await expect(page.locator('#game canvas')).toBeVisible();
   await expect.poll(async () => (await snapshot(page))?.state.elapsed).toBeGreaterThan(100);
+  await expect
+    .poll(async () => {
+      const s = await snapshot(page);
+      return s.state.players[s.sessionId]?.connected;
+    })
+    .toBe(true);
 }
 const testPassword = 'browser-test-password';
 async function name(page: Page, value: string, url = '/'): Promise<void> {
@@ -211,6 +219,222 @@ async function shootMage(page: Page): Promise<void> {
     await page.mouse.up();
   }
 }
+test('loading screen blocks movement and combat until the scene is visible', async ({
+  browser,
+}) => {
+  test.setTimeout(60000);
+  const context = await browser.newContext();
+  await lag(context);
+  const page = await context.newPage();
+  try {
+    await name(page, 'Loading');
+    await portal(page);
+    await page.locator('#create').click();
+    await expect.poll(async () => !!(await snapshot(page))).toBe(true);
+    await expect(page.locator('#loading')).toBeVisible();
+    const before = await snapshot(page);
+    const player = before.state.players[before.sessionId]!;
+    expect(player.ready).toBe(false);
+    await page.keyboard.down('d');
+    await page.keyboard.press('q');
+    await page.keyboard.press('r');
+    await page.mouse.down({ button: 'right' });
+    // Observe several simulation ticks behind the actual loading overlay.
+    await page.waitForTimeout(400);
+    const loading = await snapshot(page);
+    expect(loading.state.players[loading.sessionId]).toMatchObject({
+      x: player.x,
+      y: player.y,
+      hp: player.hp,
+      connected: false,
+      ready: false,
+      nextSpecialAt: 0,
+      nextDashAt: 0,
+      chargeStartedAt: -1,
+    });
+    expect(loading.diagnostics.pending).toBe(0);
+    expect(loading.rendered[loading.sessionId]!.x).toBe(player.x);
+    await page.keyboard.up('d');
+    await page.mouse.up({ button: 'right' });
+    await ready(page);
+    const spawned = await snapshot(page);
+    expect(spawned.state.players[spawned.sessionId]).toMatchObject({
+      x: player.x,
+      y: player.y,
+      hp: player.hp,
+      ready: true,
+      nextSpecialAt: 0,
+      nextDashAt: 0,
+    });
+    await page.keyboard.down('d');
+    await expect
+      .poll(async () => {
+        const s = await snapshot(page);
+        return s.state.players[s.sessionId]!.x;
+      })
+      .toBeGreaterThan(player.x + 15);
+    await page.keyboard.up('d');
+  } finally {
+    await cleanup(context);
+  }
+});
+
+test('ordinary shots do not stun; Q stuns normal mobs and walking contact stuns the player', async ({
+  browser,
+}, info) => {
+  test.setTimeout(60000);
+  const context = await browser.newContext(),
+    page = await context.newPage();
+  const held = new Set<string>(),
+    errors: string[] = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  try {
+    await name(page, 'Stun');
+    await page.locator('#class-warrior').click();
+    await portal(page);
+    await page.locator('#create').click();
+    await ready(page);
+    const navigation = new Navigation(MAPS.forest),
+      deadline = Date.now() + 20000;
+    while (Date.now() < deadline) {
+      const s = await snapshot(page),
+        mob = s.state.mobs['ranged-0']!;
+      const player = s.state.players[s.sessionId]!;
+      if (
+        Math.hypot(mob.x - player.x, mob.y - player.y) < 90 &&
+        terrainHit(player, mob, 0, MAPS.forest.obstacles) === null
+      ) {
+        break;
+      }
+      const goal = navigation
+        .route(player, mob, 10)
+        .find((p) => Math.hypot(p.x - player.x, p.y - player.y) > 12);
+      const next = new Set<string>();
+      if (goal) {
+        if (Math.abs(goal.x - player.x) > 8) {
+          next.add(goal.x > player.x ? 'd' : 'a');
+        }
+        if (Math.abs(goal.y - player.y) > 8) {
+          next.add(goal.y > player.y ? 's' : 'w');
+        }
+      }
+      for (const key of held) {
+        if (!next.has(key)) {
+          await page.keyboard.up(key);
+          held.delete(key);
+        }
+      }
+      for (const key of next) {
+        if (!held.has(key)) {
+          await page.keyboard.down(key);
+          held.add(key);
+        }
+      }
+      await page.waitForTimeout(40);
+    }
+    const before = (await snapshot(page)).state.mobs['ranged-0']!;
+    const point = await page.evaluate((m) => window.__openrpg.screenPoint(m.x, m.y), before);
+    await page.mouse.move(point!.x, point!.y);
+    await page.keyboard.press('q');
+    for (const key of held) {
+      await page.keyboard.up(key);
+    }
+    held.clear();
+    await expect
+      .poll(async () => (await snapshot(page)).state.mobs['ranged-0']!.stunnedUntil, {
+        intervals: [20],
+      })
+      .toBeGreaterThan(0);
+    const dashed = (await snapshot(page)).state.mobs['ranged-0']!;
+    expect(dashed.hp).toBe(before.hp);
+    await page.screenshot({ path: info.outputPath('dash-mob-stun.png') });
+    const aim = await page.evaluate((m) => window.__openrpg.screenPoint(m.x, m.y), dashed);
+    await page.mouse.move(aim!.x, aim!.y);
+    await page.mouse.down();
+    await page.waitForTimeout(80);
+    await page.mouse.up();
+    await expect
+      .poll(async () => (await snapshot(page)).state.mobs['ranged-0']!.hp, { intervals: [20] })
+      .toBeLessThan(dashed.hp);
+    expect((await snapshot(page)).state.mobs['ranged-0']!.stunnedUntil).toBe(dashed.stunnedUntil);
+
+    // Pursue again using real input until a fresh walking contact stuns the player.
+    const contactDeadline = Date.now() + 12000;
+    let stunned: Snapshot | undefined;
+    while (Date.now() < contactDeadline) {
+      const s = await snapshot(page),
+        player = s.state.players[s.sessionId]!;
+      if (player.stunnedUntil > s.state.elapsed) {
+        stunned = s;
+        break;
+      }
+      const mob = s.state.mobs['ranged-0']!;
+      const next = new Set<string>();
+      if (Math.abs(mob.x - player.x) > 4) {
+        next.add(mob.x > player.x ? 'd' : 'a');
+      }
+      if (Math.abs(mob.y - player.y) > 4) {
+        next.add(mob.y > player.y ? 's' : 'w');
+      }
+      for (const key of held) {
+        if (!next.has(key)) {
+          await page.keyboard.up(key);
+          held.delete(key);
+        }
+      }
+      for (const key of next) {
+        if (!held.has(key)) {
+          await page.keyboard.down(key);
+          held.add(key);
+        }
+      }
+      await page.waitForTimeout(30);
+    }
+    expect(stunned).toBeDefined();
+    await expect(page.locator('#ability-primary')).toContainText('Stunned');
+    for (const key of held) {
+      await page.keyboard.up(key);
+    }
+    held.clear();
+    const frozen = (await snapshot(page)).state.players[stunned!.sessionId]!;
+    const centerDistance = () =>
+      page.evaluate(() => {
+        const s = window.__openrpg.snapshot()!;
+        const p = s.rendered[s.sessionId]!;
+        const point = window.__openrpg.screenPoint(p.x, p.y)!;
+        const canvas = document.querySelector('#game canvas')!.getBoundingClientRect();
+        return Math.hypot(
+          point.x - (canvas.x + canvas.width / 2),
+          point.y - (canvas.y + canvas.height / 2),
+        );
+      });
+    const displaced = await centerDistance();
+    expect(displaced, 'knockback does not instantly snap the camera').toBeGreaterThan(8);
+    await page.keyboard.down('a');
+    held.add('a');
+    await page.mouse.down();
+    await page.waitForTimeout(250);
+    const stopped = await snapshot(page),
+      player = stopped.state.players[stopped.sessionId]!;
+    expect(player.x).toBe(frozen.x);
+    expect(player.y).toBe(frozen.y);
+    expect(player.chargeStartedAt).toBe(-1);
+    expect(stopped.chargeProgress).toBeNull();
+    expect(await centerDistance()).toBeLessThan(displaced * 0.7);
+    await page.mouse.up();
+    await page.screenshot({ path: info.outputPath('player-contact-stun.png') });
+    await expect
+      .poll(async () => (await snapshot(page)).state.players[stopped.sessionId]!.x)
+      .toBeLessThan(frozen.x - 10);
+    expect(errors).toEqual([]);
+  } finally {
+    for (const key of held) {
+      await page.keyboard.up(key);
+    }
+    await cleanup(context);
+  }
+});
+
 for (const delayed of [false, true]) {
   test(
     delayed
@@ -633,7 +857,7 @@ async function checkAbilities(pages: Page[], testInfo: TestInfo): Promise<void> 
 }
 
 for (const delayed of [false, true]) {
-  test(`charge rings, release, overcharge and cancellation${delayed ? ' with 150ms RTT' : ''}`, async ({
+  test(`charge rings, release, repeated cycles and cancellation${delayed ? ' with 150ms RTT' : ''}`, async ({
     browser,
   }, testInfo) => {
     test.setTimeout(120000);
@@ -678,21 +902,19 @@ for (const delayed of [false, true]) {
           await page.keyboard.down('d');
         }
         await page.mouse.up();
+        // Repress after local release, before network polling or screenshots add delay.
+        await expect
+          .poll(async () => (await snapshot(page)).chargeProgress, { intervals: [10] })
+          .toBeNull();
+        await page.mouse.down();
         await expect
           .poll(async () => {
             const s = await snapshot(page);
             return s.state.players[s.sessionId]!.lastAttackAt;
           })
           .toBeGreaterThan(0);
-        if (kind === 'warrior') {
-          await page.screenshot({ path: testInfo.outputPath('warrior-sweep.png') });
-          await page.keyboard.up('d');
-          expect((await snapshot(page)).diagnostics.x).toBeGreaterThan(before.diagnostics.x);
-        }
         // Recharging must begin well before the old normal cooldown would have expired.
         const released = await snapshot(page);
-        await expect(page.locator('#ability-primary')).toHaveClass(/ready/);
-        await page.mouse.down();
         await expect
           .poll(async () => (await snapshot(page)).chargeProgress, { intervals: [10] })
           .not.toBeNull();
@@ -704,12 +926,16 @@ for (const delayed of [false, true]) {
             },
             { intervals: [10] },
           )
-          .toBeGreaterThanOrEqual(released.state.elapsed - 100);
+          .toBeGreaterThan(released.state.players[released.sessionId]!.lastAttackAt);
         const restarted = await snapshot(page);
         expect(
           restarted.state.players[restarted.sessionId]!.chargeStartedAt -
             released.state.players[released.sessionId]!.lastAttackAt,
         ).toBeLessThan(duration);
+        if (kind === 'warrior') {
+          await page.keyboard.up('d');
+          expect((await snapshot(page)).diagnostics.x).toBeGreaterThan(before.diagnostics.x);
+        }
         await page.mouse.up();
         await expect
           .poll(async () => {
@@ -719,11 +945,14 @@ for (const delayed of [false, true]) {
           .toBeGreaterThan(released.state.players[released.sessionId]!.lastAttackAt);
         await page.mouse.down();
         await page.waitForTimeout(duration * 1.1);
-        expect((await snapshot(page)).chargeProgress).toBe(1);
-        const overcharged = await snapshot(page),
-          deadline = overcharged.state.players[overcharged.sessionId]!.lastAttackAt;
+        const looping = await snapshot(page);
+        expect(looping.chargeProgress).toBeLessThan(0.6);
+        await expect
+          .poll(async () => (await snapshot(page)).chargeProgress, { intervals: [10] })
+          .toBeGreaterThanOrEqual(0.65);
+        const deadline = looping.state.players[looping.sessionId]!.lastAttackAt;
         await page.waitForTimeout(150);
-        expect((await snapshot(page)).state.players[overcharged.sessionId]!.lastAttackAt).toBe(
+        expect((await snapshot(page)).state.players[looping.sessionId]!.lastAttackAt).toBe(
           deadline,
         );
         await page.evaluate(() => window.dispatchEvent(new Event('blur')));

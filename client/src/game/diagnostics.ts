@@ -34,8 +34,8 @@ export function installDiagnostics(
                   [...network.room.state.players].map(([id, p]) => [
                     id,
                     {
-                      x: network!.predict.value(p, 'x'),
-                      y: network!.predict.value(p, 'y'),
+                      x: network!.position(p, 'x'),
+                      y: network!.position(p, 'y'),
                       equipment: (
                         game?.scene.getScene('expedition') as ExpeditionScene | undefined
                       )?.actorEquipment(id),

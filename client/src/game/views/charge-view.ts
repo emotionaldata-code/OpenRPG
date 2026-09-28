@@ -1,7 +1,6 @@
 import type Phaser from 'phaser';
 import {
   CHARGE,
-  chargeMultiplier,
   chargeProgress,
   equippedCombat,
   updateCharge,
@@ -43,6 +42,8 @@ export class ChargeView {
     const available =
       self &&
       self.hp > 0 &&
+      self.connected &&
+      self.stunnedUntil <= now &&
       this.net.connected &&
       room.state.outcome === 'active' &&
       room.state.saveStatus !== 'error';
@@ -60,7 +61,13 @@ export class ChargeView {
       );
     }
     for (const [id, p] of room.state.players) {
-      if (p.hp <= 0 || !p.connected || !this.net.connected || room.state.outcome !== 'active') {
+      if (
+        p.hp <= 0 ||
+        p.stunnedUntil > now ||
+        !p.connected ||
+        !this.net.connected ||
+        room.state.outcome !== 'active'
+      ) {
         continue;
       }
       const mine = id === room.sessionId,
@@ -73,8 +80,8 @@ export class ChargeView {
       const progress = charging ? chargeProgress(now - charge.chargeStartedAt, duration) : 0;
       const sweet = charging && progress >= CHARGE.sweetStart && progress <= CHARGE.sweetEnd;
       const color = sweet ? 0xffdf85 : progress > CHARGE.sweetEnd ? 0xe69771 : 0x93cfba;
-      const x = this.net.predict.value(p, 'x'),
-        y = this.net.predict.value(p, 'y') - 12,
+      const x = this.net.position(p, 'x'),
+        y = this.net.position(p, 'y') - 12,
         radius = 34;
       const angle = (fraction: number): number => -Math.PI / 2 + fraction * Math.PI * 2;
       g.lineStyle(6, 0x142b27, 0.85).strokeCircle(x, y, radius);
@@ -96,13 +103,14 @@ export class ChargeView {
 
       if (mine && charging) {
         this.progress = progress;
+        const labelColor = sweet ? '#ffe59b' : '#b2e0c9';
+        if (this.label.style.color !== labelColor) {
+          this.label.setColor(labelColor);
+        }
         this.label
           .setVisible(true)
           .setPosition(x, y + 48)
-          .setColor(sweet ? '#ffe59b' : progress > CHARGE.sweetEnd ? '#efab84' : '#b2e0c9')
-          .setText(
-            `${sweet ? 'PERFECT' : progress > CHARGE.sweetEnd ? 'OVERCHARGED' : 'CHARGING'} · ${chargeMultiplier(progress).toFixed(2)}×`,
-          );
+          .setText(sweet ? `PERFECT · ${CHARGE.maxDamage}×` : 'RELEASE IN GOLD');
       }
     }
   }

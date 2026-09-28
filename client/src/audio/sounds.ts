@@ -21,9 +21,21 @@ const chime = (notes: number[]): Tone[] =>
 export const SOUNDS = {
   click: [tone('triangle', 620, 420, 0.055, 0.1)],
   important: chime([294, 440, 587]),
-  'archer-shot': [tone('triangle', 380, 120, 0.1), tone('noise', 3400, 900, 0.16, 0.13)],
-  'mage-shot': [tone('sine', 160, 520, 0.22, 0.2), tone('noise', 700, 2400, 0.28, 0.15)],
-  'warrior-shot': [tone('noise', 2200, 350, 0.23, 0.22), tone('triangle', 680, 160, 0.13, 0.11)],
+  'archer-shot': [
+    tone('triangle', 720, 150, 0.12, 0.17),
+    tone('noise', 5200, 800, 0.2, 0.12),
+    tone('sine', 180, 70, 0.12, 0.12),
+  ],
+  'mage-shot': [
+    tone('sine', 100, 55, 0.32, 0.2),
+    tone('triangle', 260, 740, 0.18, 0.12),
+    tone('noise', 2200, 300, 0.38, 0.18, 0.04),
+  ],
+  'warrior-shot': [
+    tone('noise', 3600, 300, 0.22, 0.2),
+    tone('triangle', 780, 190, 0.12, 0.12),
+    tone('sine', 130, 45, 0.2, 0.18, 0.04),
+  ],
   'archer-special': [tone('noise', 4000, 600, 0.45, 0.22), ...chime([440, 659, 880])],
   'mage-special': [
     tone('sawtooth', 80, 260, 0.42, 0.09),
@@ -31,7 +43,18 @@ export const SOUNDS = {
     tone('sine', 140, 45, 0.6, 0.2, 0.12),
   ],
   'warrior-special': [tone('triangle', 110, 110, 0.7, 0.12), ...chime([220, 330, 440, 660])],
-  sweet: chime([880, 1175]),
+  dash: [tone('noise', 2400, 500, 0.16, 0.12)],
+  stun: [
+    tone('sine', 140, 55, 0.2, 0.2),
+    tone('triangle', 740, 370, 0.35, 0.1, 0.03),
+    tone('sine', 1120, 560, 0.45, 0.07, 0.07),
+  ],
+  'bad-shot': [tone('triangle', 180, 70, 0.16, 0.13), tone('noise', 500, 160, 0.08, 0.07)],
+  perfect: [
+    tone('sine', 110, 55, 0.25, 0.2),
+    tone('noise', 4800, 1000, 0.16, 0.1),
+    ...chime([784, 1175, 1568]),
+  ],
   hurt: [tone('triangle', 170, 65, 0.19, 0.25), tone('noise', 600, 180, 0.12, 0.2)],
   'mob-hurt': [tone('noise', 950, 250, 0.09, 0.18), tone('sine', 180, 80, 0.1, 0.16)],
   'mob-death': [tone('triangle', 230, 45, 0.3, 0.17), tone('noise', 750, 120, 0.25, 0.12)],

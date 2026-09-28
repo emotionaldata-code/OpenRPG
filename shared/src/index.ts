@@ -15,4 +15,5 @@ export * from './inventory/loadout.js';
 export * from './inventory/loot.js';
 export * from './inventory/shop.js';
 export * from './world/enemy-attacks.js';
+export * from './world/boss-attacks.js';
 export * from './village/village.js';

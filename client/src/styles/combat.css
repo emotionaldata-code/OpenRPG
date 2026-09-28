@@ -8,7 +8,7 @@
   pointer-events: none;
 }
 .ability {
-  width: 228px;
+  width: clamp(174px, 20vw, 228px);
   display: flex;
   align-items: center;
   gap: 11px;
@@ -100,7 +100,7 @@
     gap: 6px;
   }
   .ability {
-    width: 174px;
+    width: min(174px, 30vw);
     gap: 7px;
     padding: 8px;
   }

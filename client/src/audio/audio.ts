@@ -1,4 +1,3 @@
-import { CHARGE, type CharacterClass } from '@openrpg/shared';
 import { SOUNDS, type Sound, type Tone } from './sounds';
 import { MUSIC, musicStep, type Music } from './music';
 import { Synth, type Voice } from './synth';
@@ -15,7 +14,6 @@ export class GameAudio {
   private recent = new Map<Sound, number>();
   private musicVoices: Voice[] = [];
   private charging?: Voice;
-  private sweet = false;
   private active = true;
   private unsupported = typeof window.AudioContext !== 'function';
   constructor() {
@@ -112,32 +110,21 @@ export class GameAudio {
       this.synth!.tone(tone, volume);
     }
   }
-  charge(progress: number | null, kind: CharacterClass): void {
-    if (!this.audible || progress === null) {
+  charge(active: boolean): void {
+    if (!this.audible || !active) {
       this.stopCharge();
       return;
     }
-    const hz =
-      { archer: 180, mage: 130, warrior: 95 }[kind] * (1 + Math.min(progress, CHARGE.sweetEnd) * 2);
     this.charging ??= this.synth!.tone(
-      { wave: 'sine', hz, duration: 3600, volume: 0.055 },
+      { wave: 'sine', hz: 220, duration: 3600, volume: 0.045, attack: 0.1 },
       1,
       undefined,
       true,
     );
-    this.charging?.pitch(hz);
-    if (!this.sweet && progress >= CHARGE.sweetStart && progress <= CHARGE.sweetEnd) {
-      this.play('sweet');
-      this.sweet = true;
-    }
-    if (progress > CHARGE.sweetEnd) {
-      this.charging?.pitch(hz * 0.7);
-    }
   }
   stopCharge(): void {
     this.charging?.stop();
     this.charging = undefined;
-    this.sweet = false;
   }
   private startMusic(): void {
     if (!this.audible || this.timer !== undefined) {
